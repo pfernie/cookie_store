@@ -4,6 +4,9 @@ description = "Implementation of Cookie storage and retrieval per [RFC6265](http
 name = "cookie_store"
 version = "0.5.0"
 edition = "2018"
+repository = "https://github.com/pfernie/cookie_store"
+documentation = "https://docs.rs/cookie_store"
+license = "MIT/Apache-2.0"
 
 [dependencies]
 failure = "0.1.5"
