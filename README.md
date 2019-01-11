@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/pfernie/user_agent.svg?branch=master)](https://travis-ci.org/pfernie/user_agent)
+[![Build Status](https://travis-ci.org/pfernie/cookie_store.svg?branch=master)](https://travis-ci.org/pfernie/cookie_store)
 [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/user_agent)
 
 Provides an implementation for storing and retrieving `Cookie`s per the path and domain matching 
