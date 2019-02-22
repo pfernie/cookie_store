@@ -1,13 +1,5 @@
-#[cfg(test)]
-use env_logger;
 use failure::Fail;
 use idna;
-use log;
-use publicsuffix;
-use serde;
-use time;
-use try_from;
-use url;
 
 mod cookie;
 pub use crate::cookie::Error as CookieError;
