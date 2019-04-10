@@ -9,7 +9,7 @@ documentation = "https://docs.rs/cookie_store"
 license = "MIT/Apache-2.0"
 
 [dependencies]
-failure = "0.1.5"
+failure = { version = "0.1.5", default-features = false } # don't need backtrace
 failure_derive = "0.1.5"
 idna = "0.1.5"
 log = "0.4.6"
