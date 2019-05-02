@@ -1,3 +1,8 @@
+= v0.6.0 =
+* Upgrades to `cookies` v0.12
+* Drop dependency `try_from` in lieu of `std::convert::TryFrom` (@oherrala)
+* Drop dependency on `serde_derive`, rely on `serde` only (@oherrala)
+
 = v0.4.0 =
 * Update to Rust 2018 edition
 
