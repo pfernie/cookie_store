@@ -1,10 +1,10 @@
 use std;
+use std::convert::TryFrom;
 
 use ::cookie::Cookie as RawCookie;
 use idna;
 use publicsuffix;
 use serde_derive::{Deserialize, Serialize};
-use try_from::TryFrom;
 use url::{Host, Url};
 
 use crate::utils::is_host_name;
@@ -125,8 +125,8 @@ impl CookieDomain {
 /// Construct a `CookieDomain::Suffix` from a string, stripping a single leading '.' if present.
 /// If the source string is empty, returns the `CookieDomain::Empty` variant.
 impl<'a> TryFrom<&'a str> for CookieDomain {
-    type Err = failure::Error;
-    fn try_from(value: &str) -> Result<CookieDomain, Self::Err> {
+    type Error = failure::Error;
+    fn try_from(value: &str) -> Result<CookieDomain, Self::Error> {
         idna::domain_to_ascii(value.trim())
             .map_err(super::IdnaErrors::from)
             .map_err(failure::Error::from)
@@ -149,8 +149,8 @@ impl<'a> TryFrom<&'a str> for CookieDomain {
 /// performing this step twice, the `From<&cookie::Cookie>` impl should be used,
 /// instead of passing `cookie.domain` to the `From<&str>` impl.
 impl<'a, 'c> TryFrom<&'a RawCookie<'c>> for CookieDomain {
-    type Err = failure::Error;
-    fn try_from(cookie: &'a RawCookie<'c>) -> Result<CookieDomain, Self::Err> {
+    type Error = failure::Error;
+    fn try_from(cookie: &'a RawCookie<'c>) -> Result<CookieDomain, Self::Error> {
         if let Some(domain) = cookie.domain() {
             idna::domain_to_ascii(domain.trim())
                 .map_err(super::IdnaErrors::from)
@@ -180,8 +180,8 @@ impl<'a> From<&'a CookieDomain> for String {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryFrom;
     use ::cookie::Cookie as RawCookie;
-    use try_from::TryFrom;
     use url::Url;
 
     use super::CookieDomain;
@@ -368,8 +368,8 @@ mod tests {
 mod serde {
     #[cfg(test)]
     mod tests {
+        use std::convert::TryFrom;
         use serde_json;
-        use try_from::TryFrom;
 
         use crate::cookie_domain::CookieDomain;
         use crate::utils::test::*;
