@@ -4,7 +4,6 @@ use crate::cookie_path::CookiePath;
 
 use crate::utils::{is_http_scheme, is_secure};
 use ::cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
-use serde_derive::{Deserialize, Serialize};
 use std::{error, fmt};
 use std::borrow::Cow;
 use std::convert::TryFrom;
@@ -737,157 +736,155 @@ mod tests {
     }
 }
 
-mod serde {
-    #[cfg(test)]
-    mod tests {
-        use crate::cookie::Cookie;
-        use crate::cookie_expiration::CookieExpiration;
-        use crate::utils::test as test_utils;
-        use crate::utils::test::*;
-        use serde_json::json;
-        use time;
+#[cfg(test)]
+mod serde_tests {
+    use crate::cookie::Cookie;
+    use crate::cookie_expiration::CookieExpiration;
+    use crate::utils::test as test_utils;
+    use crate::utils::test::*;
+    use serde_json::json;
+    use time;
 
-        fn encode_decode(c: &Cookie<'_>, expected: serde_json::Value) {
-            let encoded = serde_json::to_value(c).unwrap();
-            assert_eq!(
-                expected,
-                encoded,
-                "\nexpected: '{}'\n encoded: '{}'",
-                expected.to_string(),
-                encoded.to_string()
-            );
-            let decoded: Cookie<'_> = serde_json::from_value(encoded).unwrap();
-            assert_eq!(
-                *c,
-                decoded,
-                "\nexpected: '{}'\n decoded: '{}'",
-                c.to_string(),
-                decoded.to_string()
-            );
-        }
+    fn encode_decode(c: &Cookie<'_>, expected: serde_json::Value) {
+        let encoded = serde_json::to_value(c).unwrap();
+        assert_eq!(
+            expected,
+            encoded,
+            "\nexpected: '{}'\n encoded: '{}'",
+            expected.to_string(),
+            encoded.to_string()
+        );
+        let decoded: Cookie<'_> = serde_json::from_value(encoded).unwrap();
+        assert_eq!(
+            *c,
+            decoded,
+            "\nexpected: '{}'\n decoded: '{}'",
+            c.to_string(),
+            decoded.to_string()
+        );
+    }
 
-        #[test]
-        fn serde() {
-            encode_decode(
-                &test_utils::make_cookie(
-                    "cookie1=value1",
-                    "http://example.com/foo/bar",
-                    None,
-                    None,
-                ),
-                json!({
-                    "raw_cookie": "cookie1=value1",
-                    "path": ["/foo", false],
-                    "domain": { "HostOnly": "example.com" },
-                    "expires": "SessionEnd"
-                }),
-            );
-
-            encode_decode(
-                &test_utils::make_cookie(
-                    "cookie2=value2; Domain=example.com",
-                    "http://foo.example.com/foo/bar",
-                    None,
-                    None,
-                ),
-                json!({
-                    "raw_cookie": "cookie2=value2",
-                    "path": ["/foo", false],
-                    "domain": { "Suffix": "example.com" },
-                    "expires": "SessionEnd"
-                }),
-            );
-
-            encode_decode(
-                &test_utils::make_cookie(
-                    "cookie3=value3; Path=/foo/bar",
-                    "http://foo.example.com/foo",
-                    None,
-                    None,
-                ),
-                json!({
-                    "raw_cookie": "cookie3=value3",
-                    "path": ["/foo/bar", true],
-                    "domain": { "HostOnly": "foo.example.com" },
-                    "expires": "SessionEnd",
-                }),
-            );
-
-            let at_utc = time::strptime("2015-08-11T16:41:42Z", "%Y-%m-%dT%H:%M:%SZ").unwrap();
-            encode_decode(
-                &test_utils::make_cookie(
-                    "cookie4=value4",
-                    "http://example.com/foo/bar",
-                    Some(at_utc),
-                    None,
-                ),
-                json!({
-                    "raw_cookie": "cookie4=value4",
-                    "path": ["/foo", false],
-                    "domain": { "HostOnly": "example.com" },
-                    "expires": { "AtUtc": at_utc.rfc3339().to_string() },
-                }),
-            );
-
-            let expires = test_utils::make_cookie(
-                "cookie5=value5",
+    #[test]
+    fn serde() {
+        encode_decode(
+            &test_utils::make_cookie(
+                "cookie1=value1",
                 "http://example.com/foo/bar",
-                Some(in_minutes(10)),
                 None,
-            );
-            let utc_tm = match expires.expires {
-                CookieExpiration::AtUtc(ref utc_tm) => utc_tm,
-                CookieExpiration::SessionEnd => unreachable!(),
-            };
+                None,
+            ),
+            json!({
+                "raw_cookie": "cookie1=value1",
+                "path": ["/foo", false],
+                "domain": { "HostOnly": "example.com" },
+                "expires": "SessionEnd"
+            }),
+        );
 
-            encode_decode(
-                &expires,
-                json!({
-                    "raw_cookie": "cookie5=value5",
-                    "path":["/foo", false],
-                    "domain": { "HostOnly": "example.com" },
-                    "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
-                }),
-            );
-            let max_age = test_utils::make_cookie(
-                "cookie6=value6",
+        encode_decode(
+            &test_utils::make_cookie(
+                "cookie2=value2; Domain=example.com",
+                "http://foo.example.com/foo/bar",
+                None,
+                None,
+            ),
+            json!({
+                "raw_cookie": "cookie2=value2",
+                "path": ["/foo", false],
+                "domain": { "Suffix": "example.com" },
+                "expires": "SessionEnd"
+            }),
+        );
+
+        encode_decode(
+            &test_utils::make_cookie(
+                "cookie3=value3; Path=/foo/bar",
+                "http://foo.example.com/foo",
+                None,
+                None,
+            ),
+            json!({
+                "raw_cookie": "cookie3=value3",
+                "path": ["/foo/bar", true],
+                "domain": { "HostOnly": "foo.example.com" },
+                "expires": "SessionEnd",
+            }),
+        );
+
+        let at_utc = time::strptime("2015-08-11T16:41:42Z", "%Y-%m-%dT%H:%M:%SZ").unwrap();
+        encode_decode(
+            &test_utils::make_cookie(
+                "cookie4=value4",
                 "http://example.com/foo/bar",
                 Some(at_utc),
-                Some(10),
-            );
-            let utc_tm = match max_age.expires {
-                CookieExpiration::AtUtc(ref utc_tm) => utc_tm,
-                CookieExpiration::SessionEnd => unreachable!(),
-            };
-            encode_decode(
-                &max_age,
-                json!({
-                    "raw_cookie": "cookie6=value6",
-                    "path":["/foo", false],
-                    "domain": { "HostOnly": "example.com" },
-                    "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
-                }),
-            );
-
-            let max_age = test_utils::make_cookie(
-                "cookie7=value7",
-                "http://example.com/foo/bar",
                 None,
-                Some(10),
-            );
-            let utc_tm = match max_age.expires {
-                CookieExpiration::AtUtc(ref utc_tm) => utc_tm,
-                CookieExpiration::SessionEnd => unreachable!(),
-            };
-            encode_decode(
-                &max_age,
-                json!({
-                    "raw_cookie": "cookie7=value7",
-                    "path":["/foo", false],
-                    "domain": { "HostOnly": "example.com" },
-                    "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
-                }),
-            );
-        }
+            ),
+            json!({
+                "raw_cookie": "cookie4=value4",
+                "path": ["/foo", false],
+                "domain": { "HostOnly": "example.com" },
+                "expires": { "AtUtc": at_utc.rfc3339().to_string() },
+            }),
+        );
+
+        let expires = test_utils::make_cookie(
+            "cookie5=value5",
+            "http://example.com/foo/bar",
+            Some(in_minutes(10)),
+            None,
+        );
+        let utc_tm = match expires.expires {
+            CookieExpiration::AtUtc(ref utc_tm) => utc_tm,
+            CookieExpiration::SessionEnd => unreachable!(),
+        };
+
+        encode_decode(
+            &expires,
+            json!({
+                "raw_cookie": "cookie5=value5",
+                "path":["/foo", false],
+                "domain": { "HostOnly": "example.com" },
+                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+            }),
+        );
+        let max_age = test_utils::make_cookie(
+            "cookie6=value6",
+            "http://example.com/foo/bar",
+            Some(at_utc),
+            Some(10),
+        );
+        let utc_tm = match max_age.expires {
+            CookieExpiration::AtUtc(ref utc_tm) => utc_tm,
+            CookieExpiration::SessionEnd => unreachable!(),
+        };
+        encode_decode(
+            &max_age,
+            json!({
+                "raw_cookie": "cookie6=value6",
+                "path":["/foo", false],
+                "domain": { "HostOnly": "example.com" },
+                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+            }),
+        );
+
+        let max_age = test_utils::make_cookie(
+            "cookie7=value7",
+            "http://example.com/foo/bar",
+            None,
+            Some(10),
+        );
+        let utc_tm = match max_age.expires {
+            CookieExpiration::AtUtc(ref utc_tm) => utc_tm,
+            CookieExpiration::SessionEnd => unreachable!(),
+        };
+        encode_decode(
+            &max_age,
+            json!({
+                "raw_cookie": "cookie7=value7",
+                "path":["/foo", false],
+                "domain": { "HostOnly": "example.com" },
+                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+            }),
+        );
     }
 }

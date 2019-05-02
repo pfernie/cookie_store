@@ -4,7 +4,8 @@ use std::convert::TryFrom;
 use ::cookie::Cookie as RawCookie;
 use idna;
 use publicsuffix;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+use try_from::TryFrom;
 use url::{Host, Url};
 
 use crate::utils::is_host_name;
@@ -365,45 +366,43 @@ mod tests {
     }
 }
 
-mod serde {
-    #[cfg(test)]
-    mod tests {
-        use std::convert::TryFrom;
-        use serde_json;
+#[cfg(test)]
+mod serde_tests {
+    use serde_json;
+    use try_from::TryFrom;
 
-        use crate::cookie_domain::CookieDomain;
-        use crate::utils::test::*;
+    use crate::cookie_domain::CookieDomain;
+    use crate::utils::test::*;
 
-        fn encode_decode(cd: &CookieDomain, exp_json: &str) {
-            let encoded = serde_json::to_string(cd).unwrap();
-            assert!(
-                exp_json == encoded,
-                "expected: '{}'\n encoded: '{}'",
-                exp_json,
-                encoded
-            );
-            let decoded: CookieDomain = serde_json::from_str(&encoded).unwrap();
-            assert!(
-                *cd == decoded,
-                "expected: '{:?}'\n decoded: '{:?}'",
-                cd,
-                decoded
-            );
-        }
+    fn encode_decode(cd: &CookieDomain, exp_json: &str) {
+        let encoded = serde_json::to_string(cd).unwrap();
+        assert!(
+            exp_json == encoded,
+            "expected: '{}'\n encoded: '{}'",
+            exp_json,
+            encoded
+        );
+        let decoded: CookieDomain = serde_json::from_str(&encoded).unwrap();
+        assert!(
+            *cd == decoded,
+            "expected: '{:?}'\n decoded: '{:?}'",
+            cd,
+            decoded
+        );
+    }
 
-        #[test]
-        fn serde() {
-            let url = url("http://example.com");
-            encode_decode(
-                &CookieDomain::host_only(&url).expect("cannot parse domain"),
-                "{\"HostOnly\":\"example.com\"}",
-            );
-            encode_decode(
-                &CookieDomain::try_from(".example.com").expect("cannot parse domain"),
-                "{\"Suffix\":\"example.com\"}",
-            );
-            encode_decode(&CookieDomain::NotPresent, "\"NotPresent\"");
-            encode_decode(&CookieDomain::Empty, "\"Empty\"");
-        }
+    #[test]
+    fn serde() {
+        let url = url("http://example.com");
+        encode_decode(
+            &CookieDomain::host_only(&url).expect("cannot parse domain"),
+            "{\"HostOnly\":\"example.com\"}",
+        );
+        encode_decode(
+            &CookieDomain::try_from(".example.com").expect("cannot parse domain"),
+            "{\"Suffix\":\"example.com\"}",
+        );
+        encode_decode(&CookieDomain::NotPresent, "\"NotPresent\"");
+        encode_decode(&CookieDomain::Empty, "\"Empty\"");
     }
 }

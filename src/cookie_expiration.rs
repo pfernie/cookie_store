@@ -1,7 +1,7 @@
 use std;
 use std::ops::Deref;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use time::{self, Tm};
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
@@ -147,7 +147,7 @@ mod tests {
     }
 }
 
-mod serde {
+mod serde_serialization {
     use super::SerializableTm;
     use serde;
     use serde::de::{Deserializer, Visitor};
