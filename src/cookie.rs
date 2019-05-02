@@ -3,11 +3,12 @@ use crate::cookie_expiration::CookieExpiration;
 use crate::cookie_path::CookiePath;
 
 use crate::utils::{is_http_scheme, is_secure};
-use ::cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
-use std::{error, fmt};
+use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::ops::Deref;
+use std::{error, fmt};
 use time;
 use url::Url;
 
@@ -92,7 +93,7 @@ pub struct Cookie<'a> {
 }
 
 mod serde_raw_cookie {
-    use ::cookie::Cookie as RawCookie;
+    use cookie::Cookie as RawCookie;
     use serde::de::Error;
     use serde::de::Unexpected;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -276,7 +277,7 @@ mod tests {
     use super::Cookie;
     use crate::cookie_domain::CookieDomain;
     use crate::cookie_expiration::CookieExpiration;
-    use ::cookie::Cookie as RawCookie;
+    use cookie::Cookie as RawCookie;
     use time::{now_utc, Duration, Tm};
     use url::Url;
 
@@ -767,12 +768,7 @@ mod serde_tests {
     #[test]
     fn serde() {
         encode_decode(
-            &test_utils::make_cookie(
-                "cookie1=value1",
-                "http://example.com/foo/bar",
-                None,
-                None,
-            ),
+            &test_utils::make_cookie("cookie1=value1", "http://example.com/foo/bar", None, None),
             json!({
                 "raw_cookie": "cookie1=value1",
                 "path": ["/foo", false],

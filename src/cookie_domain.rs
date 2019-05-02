@@ -1,11 +1,10 @@
 use std;
 use std::convert::TryFrom;
 
-use ::cookie::Cookie as RawCookie;
+use cookie::Cookie as RawCookie;
 use idna;
 use publicsuffix;
 use serde::{Deserialize, Serialize};
-use try_from::TryFrom;
 use url::{Host, Url};
 
 use crate::utils::is_host_name;
@@ -181,8 +180,8 @@ impl<'a> From<&'a CookieDomain> for String {
 
 #[cfg(test)]
 mod tests {
+    use cookie::Cookie as RawCookie;
     use std::convert::TryFrom;
-    use ::cookie::Cookie as RawCookie;
     use url::Url;
 
     use super::CookieDomain;
@@ -368,8 +367,9 @@ mod tests {
 
 #[cfg(test)]
 mod serde_tests {
+    use std::convert::TryFrom;
+
     use serde_json;
-    use try_from::TryFrom;
 
     use crate::cookie_domain::CookieDomain;
     use crate::utils::test::*;
