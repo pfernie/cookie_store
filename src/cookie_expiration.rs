@@ -147,7 +147,7 @@ mod tests {
     }
 }
 
-mod serde {
+mod serde_serialization {
     use super::SerializableTm;
     use serde;
     use serde::de::{Deserializer, Visitor};
