@@ -3,7 +3,7 @@ use std;
 use ::cookie::Cookie as RawCookie;
 use idna;
 use publicsuffix;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use try_from::TryFrom;
 use url::{Host, Url};
 
