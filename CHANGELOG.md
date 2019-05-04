@@ -1,3 +1,6 @@
+= v0.7.0 =
+* Revert removal of `try_from` dependency
+
 = v0.6.0 =
 * Upgrades to `cookies` v0.12
 * Drop dependency `try_from` in lieu of `std::convert::TryFrom` (@oherrala)
