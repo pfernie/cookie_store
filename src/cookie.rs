@@ -6,10 +6,10 @@ use crate::utils::{is_http_scheme, is_secure};
 use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::convert::TryFrom;
 use std::ops::Deref;
 use std::{error, fmt};
 use time;
+use try_from::TryFrom;
 use url::Url;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
