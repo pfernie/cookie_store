@@ -22,7 +22,7 @@ pub enum StoreAction {
     UpdatedExisting,
 }
 
-pub type StoreResult<T> = Result<T, failure::Error>;
+pub type StoreResult<T> = Result<T, crate::Error>;
 pub type InsertResult = Result<StoreAction, CookieError>;
 #[derive(Debug, Default)]
 pub struct CookieStore {
@@ -306,7 +306,7 @@ impl CookieStore {
     where
         W: Write,
         F: Fn(&Cookie<'static>) -> Result<String, E>,
-        failure::Error: From<E>,
+        crate::Error: From<E>,
     {
         for cookie in self.iter_unexpired().filter_map(|c| {
             if c.is_persistent() {
@@ -332,7 +332,7 @@ impl CookieStore {
     where
         R: BufRead,
         F: Fn(&str) -> Result<Cookie<'static>, E>,
-        failure::Error: From<E>,
+        crate::Error: From<E>,
     {
         let mut cookies = HashMap::new();
         for line in reader.lines() {
