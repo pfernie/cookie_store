@@ -1,3 +1,6 @@
+= v0.8.0 =
+* Remove dependency on `failure` (seanmonstar)
+
 = v0.7.0 =
 * Revert removal of `try_from` dependency
 
