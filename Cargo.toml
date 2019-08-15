@@ -2,14 +2,13 @@
 authors = ["patrick.fernie@gmail.com"]
 description = "Implementation of Cookie storage and retrieval per [RFC6265](http://tools.ietf.org/html/rfc6265)"
 name = "cookie_store"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2018"
 repository = "https://github.com/pfernie/cookie_store"
 documentation = "https://docs.rs/cookie_store"
 license = "MIT/Apache-2.0"
 
 [dependencies]
-failure = "0.1.5"
 idna = "0.1.5"
 log = "0.4.6"
 publicsuffix = { version = "1.5.2", default-features = false }

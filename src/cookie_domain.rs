@@ -125,11 +125,11 @@ impl CookieDomain {
 /// Construct a `CookieDomain::Suffix` from a string, stripping a single leading '.' if present.
 /// If the source string is empty, returns the `CookieDomain::Empty` variant.
 impl<'a> TryFrom<&'a str> for CookieDomain {
-    type Error = failure::Error;
+    type Error = crate::Error;
     fn try_from(value: &str) -> Result<CookieDomain, Self::Error> {
         idna::domain_to_ascii(value.trim())
             .map_err(super::IdnaErrors::from)
-            .map_err(failure::Error::from)
+            .map_err(Into::into)
             .map(|domain| {
                 if domain.is_empty() || "." == domain {
                     CookieDomain::Empty
@@ -149,12 +149,12 @@ impl<'a> TryFrom<&'a str> for CookieDomain {
 /// performing this step twice, the `From<&cookie::Cookie>` impl should be used,
 /// instead of passing `cookie.domain` to the `From<&str>` impl.
 impl<'a, 'c> TryFrom<&'a RawCookie<'c>> for CookieDomain {
-    type Error = failure::Error;
+    type Error = crate::Error;
     fn try_from(cookie: &'a RawCookie<'c>) -> Result<CookieDomain, Self::Error> {
         if let Some(domain) = cookie.domain() {
             idna::domain_to_ascii(domain.trim())
                 .map_err(super::IdnaErrors::from)
-                .map_err(failure::Error::from)
+                .map_err(Into::into)
                 .map(|domain| {
                     if domain.is_empty() {
                         CookieDomain::Empty
