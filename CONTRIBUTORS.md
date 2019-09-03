@@ -1,4 +1,7 @@
-oherrala
-twistedfall
-erickt
-pfernie
+* @oherrala
+* @seanmonstar
+* @twistedfall
+* @erickt
+* @benesch
+* @kpcyrd
+* @pfernie
