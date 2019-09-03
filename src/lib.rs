@@ -11,7 +11,7 @@ pub use crate::cookie_store::CookieStore;
 mod utils;
 
 #[derive(Debug)]
-pub struct IdnaErrors(idna::uts46::Errors);
+pub struct IdnaErrors(idna::Errors);
 
 impl std::fmt::Display for IdnaErrors {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -21,8 +21,8 @@ impl std::fmt::Display for IdnaErrors {
 
 impl std::error::Error for IdnaErrors {}
 
-impl From<idna::uts46::Errors> for IdnaErrors {
-    fn from(e: idna::uts46::Errors) -> Self {
+impl From<idna::Errors> for IdnaErrors {
+    fn from(e: idna::Errors) -> Self {
         IdnaErrors(e)
     }
 }
