@@ -1,3 +1,6 @@
+= v0.10.0 =
+* introduce optional feature `preserve_order` which maintains cookies in insertion order.
+
 = v0.9.0 =
 * remove `try_from` dependency again now that `reqwest` minimum rust version is bumped
 * upgrade to `url 2.0` (@benesch)

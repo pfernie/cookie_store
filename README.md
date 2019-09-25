@@ -8,6 +8,10 @@ rules specified in [RFC6265](http://tools.ietf.org/html/rfc6265).
 
 Split from the [user_agent](https://github.com/pfernie/user_agent) crate.
 
+## Features
+
+`preserve_order` - if enabled, iteration order of cookies will be maintained in insertion order. Pulls in an additional dependency on the [indexmap](https://crates.io/crates/indexmap) crate.
+
 ## License
 This project is licensed and distributed under the terms of both the MIT license and Apache License (Version 2.0).
 

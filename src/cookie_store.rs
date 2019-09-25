@@ -1,16 +1,29 @@
+use std::io::{BufRead, Write};
+use std::ops::Deref;
+
+use ::cookie::Cookie as RawCookie;
+use log::debug;
+use publicsuffix;
+use url::Url;
+
 use crate::cookie::Cookie;
 use crate::cookie_domain::{is_match as domain_match, CookieDomain};
 use crate::cookie_path::is_match as path_match;
 use crate::CookieError;
-
 use crate::utils::{is_http_scheme, is_secure};
-use ::cookie::Cookie as RawCookie;
-use log::debug;
-use publicsuffix;
+
+#[cfg(feature = "preserve_order")]
+use indexmap::IndexMap;
+#[cfg(not(feature = "preserve_order"))]
 use std::collections::HashMap;
-use std::io::{BufRead, Write};
-use std::ops::Deref;
-use url::Url;
+#[cfg(feature = "preserve_order")]
+type Map<K, V> = IndexMap<K, V>;
+#[cfg(not(feature = "preserve_order"))]
+type Map<K, V> = HashMap<K, V>;
+
+type NameMap = Map<String, Cookie<'static>>;
+type PathMap = Map<String, NameMap>;
+type DomainMap = Map<String, PathMap>;
 
 #[derive(PartialEq, Clone, Debug, Eq)]
 pub enum StoreAction {
@@ -27,7 +40,7 @@ pub type InsertResult = Result<StoreAction, CookieError>;
 #[derive(Debug, Default)]
 pub struct CookieStore {
     /// Cookies stored by domain, path, then name
-    cookies: HashMap<String, HashMap<String, HashMap<String, Cookie<'static>>>>,
+    cookies: DomainMap,
     /// If set, enables [public suffix](https://tools.ietf.org/html/rfc6265#section-5.3) rejection based on the provided `publicsuffix::List`
     public_suffix_list: Option<publicsuffix::List>,
 }
@@ -124,19 +137,34 @@ impl CookieStore {
 
     /// Removes a `Cookie` from the store, returning the `Cookie` if it was in the store
     pub fn remove(&mut self, domain: &str, path: &str, name: &str) -> Option<Cookie<'static>> {
+        #[cfg(not(feature = "preserve_order"))]
+        fn map_remove<K, V, Q>(map: &mut Map<K, V>, key: &Q) -> Option<V>
+            where K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
+                  Q: std::cmp::Eq + std::hash::Hash + ?Sized,
+        {
+            map.remove(key)
+        }
+        #[cfg(feature = "preserve_order")]
+        fn map_remove<K, V, Q>(map: &mut Map<K, V>, key: &Q) -> Option<V>
+            where K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
+                  Q: std::cmp::Eq + std::hash::Hash + ?Sized,
+        {
+            map.shift_remove(key)
+        }
+
         let (removed, remove_domain) = match self.cookies.get_mut(domain) {
             None => (None, false),
             Some(domain_cookies) => {
                 let (removed, remove_path) = match domain_cookies.get_mut(path) {
                     None => (None, false),
                     Some(path_cookies) => {
-                        let removed = path_cookies.remove(name);
+                        let removed = map_remove(path_cookies, name);
                         (removed, path_cookies.is_empty())
                     }
                 };
 
                 if remove_path {
-                    domain_cookies.remove(path);
+                    map_remove(domain_cookies, path);
                     (removed, domain_cookies.is_empty())
                 } else {
                     (removed, false)
@@ -145,7 +173,7 @@ impl CookieStore {
         };
 
         if remove_domain {
-            self.cookies.remove(domain);
+            map_remove(&mut self.cookies, domain);
         }
 
         removed
@@ -262,9 +290,9 @@ impl CookieStore {
                 if self
                     .cookies
                     .entry(String::from(&cookie.domain))
-                    .or_insert_with(HashMap::new)
+                    .or_insert_with(Map::new)
                     .entry(String::from(&cookie.path))
-                    .or_insert_with(HashMap::new)
+                    .or_insert_with(Map::new)
                     .insert(cookie.name().to_owned(), cookie)
                     .is_none()
                 {
@@ -334,15 +362,15 @@ impl CookieStore {
         F: Fn(&str) -> Result<Cookie<'static>, E>,
         crate::Error: From<E>,
     {
-        let mut cookies = HashMap::new();
+        let mut cookies = Map::new();
         for line in reader.lines() {
             let cookie: Cookie<'_> = cookie_from_str(&line?[..])?;
             if !cookie.is_expired() {
                 cookies
                     .entry(String::from(&cookie.domain))
-                    .or_insert_with(HashMap::new)
+                    .or_insert_with(Map::new)
                     .entry(String::from(&cookie.path))
-                    .or_insert_with(HashMap::new)
+                    .or_insert_with(Map::new)
                     .insert(cookie.name().to_owned(), cookie);
             }
         }
