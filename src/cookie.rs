@@ -1,19 +1,20 @@
-use crate::cookie_domain::CookieDomain;
-use crate::cookie_expiration::CookieExpiration;
-use crate::cookie_path::CookiePath;
-
-use crate::utils::{is_http_scheme, is_secure};
-use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::ops::Deref;
 use std::{error, fmt};
-use time;
+
+use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
+use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use url::Url;
 
+use crate::cookie_domain::CookieDomain;
+use crate::cookie_expiration::CookieExpiration;
+use crate::cookie_path::CookiePath;
+use crate::utils::{is_http_scheme, is_secure};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Error {
+pub enum CookieError {
     /// Cookie had attribute HttpOnly but was received from a request-uri which was not an http
     /// scheme
     NonHttpScheme,
@@ -33,40 +34,38 @@ pub enum Error {
     UnspecifiedDomain,
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::NonHttpScheme => "request-uri is not an http scheme but HttpOnly attribute set",
-            Error::NonRelativeScheme => {
-                "request-uri is not a relative scheme; cannot determine host"
-            }
-            Error::DomainMismatch => "request-uri does not domain-match the cookie",
-            Error::Expired => "attempted to utilize an Expired Cookie",
-            Error::Parse => "unable to parse string as cookie::Cookie",
-            Error::PublicSuffix => "domain-attribute value is a public suffix",
-            Error::UnspecifiedDomain => "domain-attribute is not specified",
-        }
-    }
+impl error::Error for CookieError {}
 
-    fn cause(&self) -> Option<&dyn error::Error> {
-        None
-    }
-}
-
-impl fmt::Display for Error {
+impl fmt::Display for CookieError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", error::Error::description(self))
+        match *self {
+            CookieError::NonHttpScheme => write!(
+                f,
+                "request-uri is not an http scheme but HttpOnly attribute set"
+            ),
+            CookieError::NonRelativeScheme => write!(
+                f,
+                "request-uri is not a relative scheme; cannot determine host"
+            ),
+            CookieError::DomainMismatch => {
+                write!(f, "request-uri does not domain-match the cookie")
+            }
+            CookieError::Expired => write!(f, "attempted to utilize an Expired Cookie"),
+            CookieError::Parse => write!(f, "unable to parse string as cookie::Cookie"),
+            CookieError::PublicSuffix => write!(f, "domain-attribute value is a public suffix"),
+            CookieError::UnspecifiedDomain => write!(f, "domain-attribute is not specified"),
+        }
     }
 }
 
 // cookie::Cookie::parse returns Result<Cookie, ()>
-impl From<ParseError> for Error {
-    fn from(_: ParseError) -> Error {
-        Error::Parse
+impl From<ParseError> for CookieError {
+    fn from(_: ParseError) -> CookieError {
+        CookieError::Parse
     }
 }
 
-pub type CookieResult<'a> = Result<Cookie<'a>, Error>;
+pub type CookieResult<'a> = Result<Cookie<'a>, CookieError>;
 
 /// A cookie conforming more closely to [IETF RFC6265](http://tools.ietf.org/html/rfc6265)
 #[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
@@ -93,11 +92,11 @@ pub struct Cookie<'a> {
 }
 
 mod serde_raw_cookie {
-    use cookie::Cookie as RawCookie;
-    use serde::de::Error;
-    use serde::de::Unexpected;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use std::str::FromStr;
+
+    use cookie::Cookie as RawCookie;
+    use serde::de::{Error, Unexpected};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     pub fn serialize<S>(cookie: &RawCookie<'_>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -149,7 +148,7 @@ impl<'a> Cookie<'a> {
     }
 
     /// Indicates if the `Cookie` expires as of `utc_tm`.
-    pub fn expires_by(&self, utc_tm: &time::Tm) -> bool {
+    pub fn expires_by(&self, utc_tm: &OffsetDateTime) -> bool {
         self.expires.expires_by(utc_tm)
     }
 
@@ -168,7 +167,7 @@ impl<'a> Cookie<'a> {
             // If the cookie was received from a "non-HTTP" API and the
             // cookie's http-only-flag is set, abort these steps and ignore the
             // cookie entirely.
-            return Err(Error::NonHttpScheme);
+            return Err(CookieError::NonHttpScheme);
         }
 
         let domain = match CookieDomain::try_from(raw_cookie) {
@@ -178,7 +177,7 @@ impl<'a> Cookie<'a> {
                     //    If the canonicalized request-host does not domain-match the
                     //    domain-attribute:
                     //       Ignore the cookie entirely and abort these steps.
-                    Err(Error::DomainMismatch)
+                    Err(CookieError::DomainMismatch)
                 } else {
                     //    Otherwise:
                     //       Set the cookie's host-only-flag to false.
@@ -186,7 +185,7 @@ impl<'a> Cookie<'a> {
                     Ok(d)
                 }
             }
-            Err(_) => Err(Error::Parse),
+            Err(_) => Err(CookieError::Parse),
             // Otherwise:
             //    Set the cookie's host-only-flag to true.
             //    Set the cookie's domain to the canonicalized request-host.
@@ -274,18 +273,18 @@ impl<'a> From<Cookie<'a>> for RawCookie<'a> {
 
 #[cfg(test)]
 mod tests {
+    use cookie::Cookie as RawCookie;
+    use time::{Duration, OffsetDateTime};
+    use url::Url;
+
     use super::Cookie;
     use crate::cookie_domain::CookieDomain;
     use crate::cookie_expiration::CookieExpiration;
-    use cookie::Cookie as RawCookie;
-    use time::{now_utc, Duration, Tm};
-    use url::Url;
-
     use crate::utils::test as test_utils;
 
     fn cmp_domain(cookie: &str, url: &str, exp: CookieDomain) {
         let ua = test_utils::make_cookie(cookie, url, None, None);
-        assert!(ua.domain == exp, "\n{:?}", ua);
+        assert_eq!(ua.domain, exp);
     }
 
     #[test]
@@ -459,12 +458,12 @@ mod tests {
 
     // expiry-related tests
     #[inline]
-    fn in_days(days: i64) -> Tm {
-        now_utc() + Duration::days(days)
+    fn in_days(days: i64) -> OffsetDateTime {
+        OffsetDateTime::now() + Duration::days(days)
     }
     #[inline]
-    fn in_minutes(mins: i64) -> Tm {
-        now_utc() + Duration::minutes(mins)
+    fn in_minutes(mins: i64) -> OffsetDateTime {
+        OffsetDateTime::now() + Duration::minutes(mins)
     }
 
     #[test]
@@ -606,8 +605,9 @@ mod tests {
         fn do_match(exp: bool, cookie: &str, src_url: &str, request_url: Option<&str>) {
             let ua = test_utils::make_cookie(cookie, src_url, None, None);
             let request_url = request_url.unwrap_or(src_url);
-            assert!(
-                exp == ua.matches(&Url::parse(request_url).unwrap()),
+            assert_eq!(
+                exp,
+                ua.matches(&Url::parse(request_url).unwrap()),
                 "\n>> {:?}\nshould{}match\n>> {:?}\n",
                 ua,
                 if exp { " " } else { " NOT " },
@@ -739,12 +739,13 @@ mod tests {
 
 #[cfg(test)]
 mod serde_tests {
+    use serde_json::json;
+    use time::OffsetDateTime;
+
     use crate::cookie::Cookie;
     use crate::cookie_expiration::CookieExpiration;
     use crate::utils::test as test_utils;
     use crate::utils::test::*;
-    use serde_json::json;
-    use time;
 
     fn encode_decode(c: &Cookie<'_>, expected: serde_json::Value) {
         let encoded = serde_json::to_value(c).unwrap();
@@ -807,7 +808,8 @@ mod serde_tests {
             }),
         );
 
-        let at_utc = time::strptime("2015-08-11T16:41:42Z", "%Y-%m-%dT%H:%M:%SZ").unwrap();
+        let at_utc =
+            OffsetDateTime::parse("2015-08-11T16:41:42+0000", "%Y-%m-%dT%H:%M:%S%z").unwrap();
         encode_decode(
             &test_utils::make_cookie(
                 "cookie4=value4",
@@ -819,7 +821,7 @@ mod serde_tests {
                 "raw_cookie": "cookie4=value4",
                 "path": ["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": at_utc.rfc3339().to_string() },
+                "expires": { "AtUtc": at_utc.format("%Y-%m-%dT%H:%M:%S%z") },
             }),
         );
 
@@ -840,7 +842,7 @@ mod serde_tests {
                 "raw_cookie": "cookie5=value5",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+                "expires": { "AtUtc": utc_tm.format("%Y-%m-%dT%H:%M:%S%z") },
             }),
         );
         let max_age = test_utils::make_cookie(
@@ -859,7 +861,7 @@ mod serde_tests {
                 "raw_cookie": "cookie6=value6",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+                "expires": { "AtUtc": utc_tm.format("%Y-%m-%dT%H:%M:%S%z") },
             }),
         );
 
@@ -879,7 +881,7 @@ mod serde_tests {
                 "raw_cookie": "cookie7=value7",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+                "expires": { "AtUtc": utc_tm.format("%Y-%m-%dT%H:%M:%S%z") },
             }),
         );
     }

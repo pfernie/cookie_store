@@ -1,7 +1,8 @@
 [![Build Status](https://travis-ci.org/pfernie/cookie_store.svg?branch=master)](https://travis-ci.org/pfernie/cookie_store)
 [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/user_agent)
-
-[Documentation](https://docs.rs/cookie_store/)
+[![Crate version](https://img.shields.io/crates/v/cookie_store)](https://crates.io/cookie_store)
+[![Documentation](https://img.shields.io/badge/docs-cookie_store-blue.svg)](https://docs.rs/cookie_store/)
+[![Dependency Status](https://deps.rs/repo/github/pfernie/cookie_store/status.svg)](https://deps.rs/repo/github/pfernie/cookie_store)
 
 Provides an implementation for storing and retrieving `Cookie`s per the path and domain matching 
 rules specified in [RFC6265](http://tools.ietf.org/html/rfc6265).

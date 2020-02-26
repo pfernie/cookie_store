@@ -1,21 +1,18 @@
-use std;
-use std::ops::Deref;
-
 use serde::{Deserialize, Serialize};
-use time::{self, Tm};
+use time::{Duration, OffsetDateTime};
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
-pub struct SerializableTm(Tm);
+pub struct SerializableTm(OffsetDateTime);
 
-impl Deref for SerializableTm {
-    type Target = time::Tm;
+impl std::ops::Deref for SerializableTm {
+    type Target = OffsetDateTime;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl From<Tm> for SerializableTm {
-    fn from(tm: Tm) -> SerializableTm {
+impl From<OffsetDateTime> for SerializableTm {
+    fn from(tm: OffsetDateTime) -> SerializableTm {
         SerializableTm(tm)
     }
 }
@@ -34,13 +31,13 @@ pub enum CookieExpiration {
 impl CookieExpiration {
     /// Indicates if the `Cookie` is expired as of *now*.
     pub fn is_expired(&self) -> bool {
-        self.expires_by(&time::now_utc())
+        self.expires_by(&OffsetDateTime::now())
     }
 
     /// Indicates if the `Cookie` expires as of `utc_tm`.
-    pub fn expires_by(&self, utc_tm: &Tm) -> bool {
+    pub fn expires_by(&self, utc_tm: &OffsetDateTime) -> bool {
         match *self {
-            CookieExpiration::AtUtc(ref expire_tm) => **expire_tm <= *utc_tm,
+            CookieExpiration::AtUtc(ref expire_tm) => &expire_tm.0 <= utc_tm,
             CookieExpiration::SessionEnd => false,
         }
     }
@@ -52,43 +49,33 @@ impl From<u64> for CookieExpiration {
         //    be the earliest representable date and time.  Otherwise, let the
         //    expiry-time be the current date and time plus delta-seconds seconds.
         let utc_tm = if 0 == max_age {
-            time::at_utc(time::Timespec::new(0, 0))
+            OffsetDateTime::unix_epoch()
         } else {
             // make sure we don't trigger a panic! in Duration by restricting the seconds
             // to the max
-            let max_age = std::cmp::min(time::Duration::max_value().num_seconds() as u64, max_age);
-            let utc_tm = time::now_utc() + time::Duration::seconds(max_age as i64);
-            match time::strptime(&format!("{}", utc_tm.rfc3339()), "%Y-%m-%dT%H:%M:%SZ") {
-                Ok(utc_tm) => utc_tm,
-                Err(_) => time::strptime("9999-12-31T23:59:59Z", "%Y-%m-%dT%H:%M:%SZ")
-                    .expect("unable to strptime maximum value"),
-            }
+            let max_age = std::cmp::min(Duration::max_value().whole_seconds() as u64, max_age);
+            let utc_tm = OffsetDateTime::now() + Duration::seconds(max_age as i64);
+            utc_tm
         };
         CookieExpiration::from(utc_tm)
     }
 }
 
-impl From<time::Tm> for CookieExpiration {
-    fn from(utc_tm: Tm) -> CookieExpiration {
-        // format & re-parse the Tm to make sure de/serialization is consistent
-        let utc_tm = match time::strptime(&format!("{}", utc_tm.rfc3339()), "%Y-%m-%dT%H:%M:%SZ") {
-            Ok(utc_tm) => utc_tm,
-            Err(_) => time::strptime("9999-12-31T23:59:59Z", "%Y-%m-%dT%H:%M:%SZ")
-                .expect("unable to strptime maximum value"),
-        };
+impl From<OffsetDateTime> for CookieExpiration {
+    fn from(utc_tm: OffsetDateTime) -> CookieExpiration {
         CookieExpiration::AtUtc(SerializableTm::from(utc_tm))
     }
 }
 
-impl From<time::Duration> for CookieExpiration {
-    fn from(duration: time::Duration) -> Self {
+impl From<Duration> for CookieExpiration {
+    fn from(duration: Duration) -> Self {
         // If delta-seconds is less than or equal to zero (0), let expiry-time
         //    be the earliest representable date and time.  Otherwise, let the
         //    expiry-time be the current date and time plus delta-seconds seconds.
         let utc_tm = if duration.is_zero() {
-            time::at_utc(time::Timespec::new(0, 0))
+            OffsetDateTime::unix_epoch()
         } else {
-            time::now_utc() + duration
+            OffsetDateTime::now() + duration
         };
         CookieExpiration::from(utc_tm)
     }
@@ -96,14 +83,14 @@ impl From<time::Duration> for CookieExpiration {
 
 #[cfg(test)]
 mod tests {
-    use super::CookieExpiration;
-    use time;
+    use time::Duration;
 
+    use super::CookieExpiration;
     use crate::utils::test::*;
 
     #[test]
     fn max_age_bounds() {
-        match CookieExpiration::from(time::Duration::max_value().num_seconds() as u64 + 1) {
+        match CookieExpiration::from(Duration::max_value().whole_seconds() as u64 + 1) {
             CookieExpiration::AtUtc(_) => assert!(true),
             _ => assert!(false),
         }
@@ -149,24 +136,24 @@ mod tests {
 
 mod serde_serialization {
     use super::SerializableTm;
-    use serde;
-    use serde::de::{Deserializer, Visitor};
+    use serde::de;
     use std::fmt;
     use time;
+    use time::OffsetDateTime;
 
     impl serde::Serialize for SerializableTm {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
         {
-            serializer.serialize_str(&format!("{}", self.0.rfc3339()))
+            serializer.serialize_str(&format!("{}", self.0.format("%Y-%m-%dT%H:%M:%S%z")))
         }
     }
 
     impl<'a> serde::Deserialize<'a> for SerializableTm {
         fn deserialize<D>(deserializer: D) -> Result<SerializableTm, D::Error>
         where
-            D: Deserializer<'a>,
+            D: de::Deserializer<'a>,
         {
             deserializer.deserialize_str(TmVisitor)
         }
@@ -174,14 +161,18 @@ mod serde_serialization {
 
     struct TmVisitor;
 
-    impl<'a> Visitor<'a> for TmVisitor {
+    impl<'a> de::Visitor<'a> for TmVisitor {
         type Value = SerializableTm;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("datetime")
+        }
 
         fn visit_str<E>(self, str_data: &str) -> Result<SerializableTm, E>
         where
-            E: serde::de::Error,
+            E: de::Error,
         {
-            time::strptime(str_data, "%Y-%m-%dT%H:%M:%SZ")
+            OffsetDateTime::parse(str_data, "%Y-%m-%dT%H:%M:%S%z")
                 .map(SerializableTm::from)
                 .map_err(|_| {
                     E::custom(format!(
@@ -190,41 +181,28 @@ mod serde_serialization {
                     ))
                 })
         }
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("datetime")
-        }
     }
 
     #[cfg(test)]
     mod tests {
+        use time::OffsetDateTime;
+
         use crate::cookie_expiration::CookieExpiration;
-        use serde_json;
-        use time;
 
         fn encode_decode(ce: &CookieExpiration, exp_json: &str) {
             let encoded = serde_json::to_string(ce).unwrap();
-            assert!(
-                exp_json == encoded,
-                "expected: '{}'\n encoded: '{}'",
-                exp_json,
-                encoded
-            );
+            assert_eq!(exp_json, encoded);
             let decoded: CookieExpiration = serde_json::from_str(&encoded).unwrap();
-            assert!(
-                *ce == decoded,
-                "expected: '{:?}'\n decoded: '{:?}'",
-                ce,
-                decoded
-            );
+            assert_eq!(*ce, decoded);
         }
 
         #[test]
         fn serde() {
-            let at_utc = time::strptime("2015-08-11T16:41:42Z", "%Y-%m-%dT%H:%M:%SZ").unwrap();
+            let at_utc =
+                OffsetDateTime::parse("2015-08-11T16:41:42+0000", "%Y-%m-%dT%H:%M:%S%z").unwrap();
             encode_decode(
                 &CookieExpiration::from(at_utc),
-                "{\"AtUtc\":\"2015-08-11T16:41:42Z\"}",
+                "{\"AtUtc\":\"2015-08-11T16:41:42+0000\"}",
             );
             encode_decode(&CookieExpiration::SessionEnd, "\"SessionEnd\"");
         }

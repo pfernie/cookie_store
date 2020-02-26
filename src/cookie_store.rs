@@ -1,25 +1,19 @@
 use std::io::{BufRead, Write};
 use std::ops::Deref;
 
-use ::cookie::Cookie as RawCookie;
+use cookie::Cookie as RawCookie;
 use log::debug;
-use publicsuffix;
 use url::Url;
 
-use crate::cookie::Cookie;
+use crate::cookie::{Cookie, CookieError};
 use crate::cookie_domain::{is_match as domain_match, CookieDomain};
 use crate::cookie_path::is_match as path_match;
-use crate::CookieError;
 use crate::utils::{is_http_scheme, is_secure};
 
 #[cfg(feature = "preserve_order")]
-use indexmap::IndexMap;
+type Map<K, V> = indexmap::IndexMap<K, V>;
 #[cfg(not(feature = "preserve_order"))]
-use std::collections::HashMap;
-#[cfg(feature = "preserve_order")]
-type Map<K, V> = IndexMap<K, V>;
-#[cfg(not(feature = "preserve_order"))]
-type Map<K, V> = HashMap<K, V>;
+type Map<K, V> = std::collections::HashMap<K, V>;
 
 type NameMap = Map<String, Cookie<'static>>;
 type PathMap = Map<String, NameMap>;
@@ -139,15 +133,17 @@ impl CookieStore {
     pub fn remove(&mut self, domain: &str, path: &str, name: &str) -> Option<Cookie<'static>> {
         #[cfg(not(feature = "preserve_order"))]
         fn map_remove<K, V, Q>(map: &mut Map<K, V>, key: &Q) -> Option<V>
-            where K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
-                  Q: std::cmp::Eq + std::hash::Hash + ?Sized,
+        where
+            K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
+            Q: std::cmp::Eq + std::hash::Hash + ?Sized,
         {
             map.remove(key)
         }
         #[cfg(feature = "preserve_order")]
         fn map_remove<K, V, Q>(map: &mut Map<K, V>, key: &Q) -> Option<V>
-            where K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
-                  Q: std::cmp::Eq + std::hash::Hash + ?Sized,
+        where
+            K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
+            Q: std::cmp::Eq + std::hash::Hash + ?Sized,
         {
             map.shift_remove(key)
         }
@@ -388,15 +384,16 @@ impl CookieStore {
 
 #[cfg(test)]
 mod tests {
+    use std::str::from_utf8;
+
+    use cookie::Cookie as RawCookie;
+    use time::OffsetDateTime;
+
     use super::CookieStore;
     use super::{InsertResult, StoreAction};
     use crate::cookie::Cookie;
-    use crate::CookieError;
-    use ::cookie::Cookie as RawCookie;
-    use std::str::from_utf8;
-    use time::Tm;
-
     use crate::utils::test as test_utils;
+    use crate::CookieError;
 
     macro_rules! has_str {
         ($e: expr, $i: ident) => {{
@@ -470,7 +467,7 @@ mod tests {
         store: &mut CookieStore,
         cookie: &str,
         url: &str,
-        expires: Option<Tm>,
+        expires: Option<OffsetDateTime>,
         max_age: Option<u64>,
     ) -> InsertResult {
         store.insert(
@@ -1139,9 +1136,13 @@ mod tests {
     macro_rules! dump {
         ($e: expr, $i: ident) => {{
             use serde_json;
-            use time::now_utc;
+            use time::OffsetDateTime;
             println!("");
-            println!("==== {}: {} ====", $e, now_utc().rfc3339());
+            println!(
+                "==== {}: {} ====",
+                $e,
+                OffsetDateTime::now().format("%Y-%m-%dT%H:%M:%SZ")
+            );
             for c in $i.iter_any() {
                 println!(
                     "{} {}",
@@ -1176,8 +1177,9 @@ mod tests {
                 exp
             );
         }
-        assert!(
-            matches.len() == exp.len(),
+        assert_eq!(
+            matches.len(),
+            exp.len(),
             "{}: matches={:?} != exp={:?}",
             url,
             matches,

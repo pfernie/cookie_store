@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::ops::Deref;
+
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 /// Returns true if `request_url` path-matches `path` per
@@ -117,8 +118,9 @@ impl From<CookiePath> for String {
 
 #[cfg(test)]
 mod tests {
-    use super::CookiePath;
     use url::Url;
+
+    use super::CookiePath;
 
     #[test]
     fn default_path() {
@@ -142,8 +144,9 @@ mod tests {
         let url = Url::parse(&format!("http://example.com{}", rp))
             .expect("unable to parse url in do_match");
         let cp = CookiePath::parse(cp).expect("unable to parse CookiePath in do_match");
-        assert!(
-            exp == cp.matches(&url),
+        assert_eq!(
+            exp,
+            cp.matches(&url),
             "\n>> {:?}\nshould{}match\n>> {:?}\n>> {:?}\n",
             cp,
             if exp { " " } else { " NOT " },

@@ -1,14 +1,12 @@
-use idna;
-
 mod cookie;
-pub use crate::cookie::Error as CookieError;
-pub use crate::cookie::{Cookie, CookieResult};
 mod cookie_domain;
 mod cookie_expiration;
 mod cookie_path;
 mod cookie_store;
-pub use crate::cookie_store::CookieStore;
 mod utils;
+
+pub use crate::cookie::{Cookie, CookieError, CookieResult};
+pub use crate::cookie_store::CookieStore;
 
 #[derive(Debug)]
 pub struct IdnaErrors(idna::Errors);

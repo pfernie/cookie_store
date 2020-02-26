@@ -1,10 +1,7 @@
-use std;
+use std::convert::TryFrom;
 
 use cookie::Cookie as RawCookie;
-use idna;
-use publicsuffix;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 use url::{Host, Url};
 
 use crate::utils::is_host_name;
@@ -180,8 +177,9 @@ impl<'a> From<&'a CookieDomain> for String {
 
 #[cfg(test)]
 mod tests {
-    use cookie::Cookie as RawCookie;
     use std::convert::TryFrom;
+
+    use cookie::Cookie as RawCookie;
     use url::Url;
 
     use super::CookieDomain;
@@ -190,8 +188,9 @@ mod tests {
     #[inline]
     fn matches(expected: bool, cookie_domain: &CookieDomain, url: &str) {
         let url = Url::parse(url).unwrap();
-        assert!(
-            expected == cookie_domain.matches(&url),
+        assert_eq!(
+            expected,
+            cookie_domain.matches(&url),
             "cookie_domain: {:?} url: {:?}, url.host_str(): {:?}",
             cookie_domain,
             url,
@@ -375,19 +374,9 @@ mod serde_tests {
 
     fn encode_decode(cd: &CookieDomain, exp_json: &str) {
         let encoded = serde_json::to_string(cd).unwrap();
-        assert!(
-            exp_json == encoded,
-            "expected: '{}'\n encoded: '{}'",
-            exp_json,
-            encoded
-        );
+        assert_eq!(exp_json, encoded);
         let decoded: CookieDomain = serde_json::from_str(&encoded).unwrap();
-        assert!(
-            *cd == decoded,
-            "expected: '{:?}'\n decoded: '{:?}'",
-            cd,
-            decoded
-        );
+        assert_eq!(*cd, decoded);
     }
 
     #[test]
