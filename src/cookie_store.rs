@@ -1,16 +1,20 @@
+use std::fmt::{self, Formatter};
 use std::io::{BufRead, Write};
+use std::iter;
 use std::ops::Deref;
 
 use ::cookie::Cookie as RawCookie;
 use log::debug;
 use publicsuffix;
+use serde::de::{SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use url::Url;
 
 use crate::cookie::Cookie;
 use crate::cookie_domain::{is_match as domain_match, CookieDomain};
 use crate::cookie_path::is_match as path_match;
-use crate::CookieError;
 use crate::utils::{is_http_scheme, is_secure};
+use crate::CookieError;
 
 #[cfg(feature = "preserve_order")]
 use indexmap::IndexMap;
@@ -139,15 +143,17 @@ impl CookieStore {
     pub fn remove(&mut self, domain: &str, path: &str, name: &str) -> Option<Cookie<'static>> {
         #[cfg(not(feature = "preserve_order"))]
         fn map_remove<K, V, Q>(map: &mut Map<K, V>, key: &Q) -> Option<V>
-            where K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
-                  Q: std::cmp::Eq + std::hash::Hash + ?Sized,
+        where
+            K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
+            Q: std::cmp::Eq + std::hash::Hash + ?Sized,
         {
             map.remove(key)
         }
         #[cfg(feature = "preserve_order")]
         fn map_remove<K, V, Q>(map: &mut Map<K, V>, key: &Q) -> Option<V>
-            where K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
-                  Q: std::cmp::Eq + std::hash::Hash + ?Sized,
+        where
+            K: std::borrow::Borrow<Q> + std::cmp::Eq + std::hash::Hash,
+            Q: std::cmp::Eq + std::hash::Hash + ?Sized,
         {
             map.shift_remove(key)
         }
@@ -362,9 +368,30 @@ impl CookieStore {
         F: Fn(&str) -> Result<Cookie<'static>, E>,
         crate::Error: From<E>,
     {
+        let cookies = reader.lines().filter_map(|line_result| {
+            let cookie = line_result
+                .map_err(Into::into)
+                .and_then(|line| cookie_from_str(&line).map_err(crate::Error::from));
+            match cookie {
+                Ok(c) if c.is_expired() => None,
+                _ => Some(cookie),
+            }
+        });
+        Self::from_cookies(cookies)
+    }
+
+    /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
+    pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
+        CookieStore::load(reader, |cookie| ::serde_json::from_str(cookie))
+    }
+
+    fn from_cookies<I, E>(iter: I) -> Result<Self, E>
+    where
+        I: IntoIterator<Item = Result<Cookie<'static>, E>>,
+    {
         let mut cookies = Map::new();
-        for line in reader.lines() {
-            let cookie: Cookie<'_> = cookie_from_str(&line?[..])?;
+        for cookie in iter {
+            let cookie = cookie?;
             if !cookie.is_expired() {
                 cookies
                     .entry(String::from(&cookie.domain))
@@ -374,15 +401,45 @@ impl CookieStore {
                     .insert(cookie.name().to_owned(), cookie);
             }
         }
-        Ok(CookieStore {
+        Ok(Self {
             cookies,
             public_suffix_list: None,
         })
     }
+}
 
-    /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
-    pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
-        CookieStore::load(reader, |cookie| ::serde_json::from_str(cookie))
+impl Serialize for CookieStore {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_seq(self.iter_unexpired().filter(|c| c.is_persistent()))
+    }
+}
+
+struct CookieStoreVisitor;
+
+impl<'de> Visitor<'de> for CookieStoreVisitor {
+    type Value = CookieStore;
+
+    fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a sequence of cookies")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        CookieStore::from_cookies(iter::from_fn(|| seq.next_element().transpose()))
+    }
+}
+
+impl<'de> Deserialize<'de> for CookieStore {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(CookieStoreVisitor)
     }
 }
 
@@ -742,6 +799,108 @@ mod tests {
     }
 
     #[test]
+    fn serialize() {
+        let mut output = vec![];
+        let mut store = CookieStore::default();
+        serde_json::to_writer(&mut output, &store).unwrap();
+        assert_eq!("[]", from_utf8(&output[..]).unwrap());
+        output.clear();
+
+        // non-persistent cookie, should not be saved
+        inserted!(add_cookie(
+            &mut store,
+            "cookie0=value0",
+            "http://example.com/foo/bar",
+            None,
+            None,
+        ));
+        serde_json::to_writer(&mut output, &store).unwrap();
+        assert_eq!("[]", from_utf8(&output[..]).unwrap());
+        output.clear();
+
+        // persistent cookie, Max-Age
+        inserted!(add_cookie(
+            &mut store,
+            "cookie1=value1",
+            "http://example.com/foo/bar",
+            None,
+            Some(10),
+        ));
+        serde_json::to_writer(&mut output, &store).unwrap();
+        not_has_str!("cookie0=value0", output);
+        has_str!("cookie1=value1", output);
+        output.clear();
+
+        // persistent cookie, Expires
+        inserted!(add_cookie(
+            &mut store,
+            "cookie2=value2",
+            "http://example.com/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        serde_json::to_writer(&mut output, &store).unwrap();
+        not_has_str!("cookie0=value0", output);
+        has_str!("cookie1=value1", output);
+        has_str!("cookie2=value2", output);
+        output.clear();
+
+        inserted!(add_cookie(
+            &mut store,
+            "cookie3=value3; Domain=example.com",
+            "http://foo.example.com/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie4=value4; Path=/foo/",
+            "http://foo.example.com/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie5=value5",
+            "http://127.0.0.1/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie6=value6",
+            "http://[::1]/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie7=value7; Secure",
+            "https://[::1]/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie8=value8; HttpOnly",
+            "http://[::1]/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        serde_json::to_writer(&mut output, &store).unwrap();
+        not_has_str!("cookie0=value0", output);
+        has_str!("cookie1=value1", output);
+        has_str!("cookie2=value2", output);
+        has_str!("cookie3=value3", output);
+        has_str!("cookie4=value4", output);
+        has_str!("cookie5=value5", output);
+        has_str!("cookie6=value6", output);
+        has_str!("cookie7=value7; Secure", output);
+        has_str!("cookie8=value8; HttpOnly", output);
+        output.clear();
+    }
+
+    #[test]
     fn domains() {
         let mut store = CookieStore::default();
         //        The user agent will reject cookies unless the Domain attribute
@@ -967,6 +1126,110 @@ mod tests {
         let store = make_match_store();
         store.save_json(&mut output).unwrap();
         let store = CookieStore::load_json(&output[..]).unwrap();
+        check_matches!(&store);
+    }
+
+    #[test]
+    fn deserialize() {
+        let mut store = CookieStore::default();
+        // non-persistent cookie, should not be saved
+        inserted!(add_cookie(
+            &mut store,
+            "cookie0=value0",
+            "http://example.com/foo/bar",
+            None,
+            None,
+        ));
+        // persistent cookie, Max-Age
+        inserted!(add_cookie(
+            &mut store,
+            "cookie1=value1",
+            "http://example.com/foo/bar",
+            None,
+            Some(10),
+        ));
+        // persistent cookie, Expires
+        inserted!(add_cookie(
+            &mut store,
+            "cookie2=value2",
+            "http://example.com/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie3=value3; Domain=example.com",
+            "http://foo.example.com/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie4=value4; Path=/foo/",
+            "http://foo.example.com/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie5=value5",
+            "http://127.0.0.1/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie6=value6",
+            "http://[::1]/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie7=value7; Secure",
+            "http://example.com/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        inserted!(add_cookie(
+            &mut store,
+            "cookie8=value8; HttpOnly",
+            "http://example.com/foo/bar",
+            Some(test_utils::in_days(1)),
+            None,
+        ));
+        let mut output = vec![];
+        serde_json::to_writer(&mut output, &store).unwrap();
+        not_has_str!("cookie0=value0", output);
+        has_str!("cookie1=value1", output);
+        has_str!("cookie2=value2", output);
+        has_str!("cookie3=value3", output);
+        has_str!("cookie4=value4", output);
+        has_str!("cookie5=value5", output);
+        has_str!("cookie6=value6", output);
+        has_str!("cookie7=value7; Secure", output);
+        has_str!("cookie8=value8; HttpOnly", output);
+        let store: CookieStore = serde_json::from_reader(&output[..]).unwrap();
+        assert!(store.get("example.com", "/foo", "cookie0").is_none());
+        assert!(store.get("example.com", "/foo", "cookie1").unwrap().value() == "value1");
+        assert!(store.get("example.com", "/foo", "cookie2").unwrap().value() == "value2");
+        assert!(store.get("example.com", "/foo", "cookie3").unwrap().value() == "value3");
+        assert!(
+            store
+                .get("foo.example.com", "/foo/", "cookie4")
+                .unwrap()
+                .value()
+                == "value4"
+        );
+        assert!(store.get("127.0.0.1", "/foo", "cookie5").unwrap().value() == "value5");
+        assert!(store.get("[::1]", "/foo", "cookie6").unwrap().value() == "value6");
+        assert!(store.get("example.com", "/foo", "cookie7").unwrap().value() == "value7");
+        assert!(store.get("example.com", "/foo", "cookie8").unwrap().value() == "value8");
+
+        output.clear();
+        let store = make_match_store();
+        serde_json::to_writer(&mut output, &store).unwrap();
+        let store: CookieStore = serde_json::from_reader(&output[..]).unwrap();
         check_matches!(&store);
     }
 
