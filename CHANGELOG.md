@@ -1,3 +1,6 @@
+= v0.11.0 =
+* Implement `{De,}Serialize` for `CookieStore` (@Felerius)
+  
 = v0.10.0 =
 * introduce optional feature `preserve_order` which maintains cookies in insertion order.
 
