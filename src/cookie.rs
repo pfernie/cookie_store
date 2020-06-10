@@ -150,7 +150,7 @@ impl<'a> Cookie<'a> {
         self.expires.expires_by(utc_tm)
     }
 
-    /// Parses a new `user_agent::Cookie` from `cookie_str`.
+    /// Parses a new `cookie_store::Cookie` from `cookie_str`.
     pub fn parse<S>(cookie_str: S, request_url: &Url) -> CookieResult<'a>
     where
         S: Into<Cow<'a, str>>,
@@ -158,7 +158,7 @@ impl<'a> Cookie<'a> {
         Cookie::try_from_raw_cookie(&RawCookie::parse(cookie_str)?, request_url)
     }
 
-    /// Create a new `user_agent::Cookie` from a `cookie::Cookie` (from the `cookie` crate)
+    /// Create a new `cookie_store::Cookie` from a `cookie::Cookie` (from the `cookie` crate)
     /// received from `request_url`.
     pub fn try_from_raw_cookie(raw_cookie: &RawCookie<'a>, request_url: &Url) -> CookieResult<'a> {
         if raw_cookie.http_only().unwrap_or(false) && !is_http_scheme(request_url) {
