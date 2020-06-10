@@ -451,7 +451,7 @@ mod tests {
     use crate::CookieError;
     use ::cookie::Cookie as RawCookie;
     use std::str::from_utf8;
-    use time::Tm;
+    use time::OffsetDateTime;
 
     use crate::utils::test as test_utils;
 
@@ -527,7 +527,7 @@ mod tests {
         store: &mut CookieStore,
         cookie: &str,
         url: &str,
-        expires: Option<Tm>,
+        expires: Option<OffsetDateTime>,
         max_age: Option<u64>,
     ) -> InsertResult {
         store.insert(
@@ -1402,9 +1402,12 @@ mod tests {
     macro_rules! dump {
         ($e: expr, $i: ident) => {{
             use serde_json;
-            use time::now_utc;
             println!("");
-            println!("==== {}: {} ====", $e, now_utc().rfc3339());
+            println!(
+                "==== {}: {} ====",
+                $e,
+                time::OffsetDateTime::now_utc().format(crate::rfc3339_fmt::RFC3339_FORMAT)
+            );
             for c in $i.iter_any() {
                 println!(
                     "{} {}",

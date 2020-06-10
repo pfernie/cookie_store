@@ -146,7 +146,7 @@ impl<'a> Cookie<'a> {
     }
 
     /// Indicates if the `Cookie` expires as of `utc_tm`.
-    pub fn expires_by(&self, utc_tm: &time::Tm) -> bool {
+    pub fn expires_by(&self, utc_tm: &time::OffsetDateTime) -> bool {
         self.expires.expires_by(utc_tm)
     }
 
@@ -252,7 +252,7 @@ impl<'a> From<Cookie<'a>> for RawCookie<'a> {
         // Max-Age is relative, will not have same meaning now, so only set `Expires`.
         match cookie.expires {
             CookieExpiration::AtUtc(utc_tm) => {
-                builder = builder.expires(*utc_tm);
+                builder = builder.expires(utc_tm);
             }
             CookieExpiration::SessionEnd => {}
         }
@@ -275,7 +275,7 @@ mod tests {
     use crate::cookie_domain::CookieDomain;
     use crate::cookie_expiration::CookieExpiration;
     use cookie::Cookie as RawCookie;
-    use time::{now_utc, Duration, Tm};
+    use time::{Duration, OffsetDateTime};
     use url::Url;
 
     use crate::utils::test as test_utils;
@@ -456,12 +456,12 @@ mod tests {
 
     // expiry-related tests
     #[inline]
-    fn in_days(days: i64) -> Tm {
-        now_utc() + Duration::days(days)
+    fn in_days(days: i64) -> OffsetDateTime {
+        OffsetDateTime::now_utc() + Duration::days(days)
     }
     #[inline]
-    fn in_minutes(mins: i64) -> Tm {
-        now_utc() + Duration::minutes(mins)
+    fn in_minutes(mins: i64) -> OffsetDateTime {
+        OffsetDateTime::now_utc() + Duration::minutes(mins)
     }
 
     #[test]
@@ -804,7 +804,9 @@ mod serde_tests {
             }),
         );
 
-        let at_utc = time::strptime("2015-08-11T16:41:42Z", "%Y-%m-%dT%H:%M:%SZ").unwrap();
+        let at_utc = time::date!(2015 - 08 - 11)
+            .with_time(time::time!(16:41:42))
+            .assume_utc();
         encode_decode(
             &test_utils::make_cookie(
                 "cookie4=value4",
@@ -816,7 +818,7 @@ mod serde_tests {
                 "raw_cookie": "cookie4=value4",
                 "path": ["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": at_utc.rfc3339().to_string() },
+                "expires": { "AtUtc": at_utc.format(crate::rfc3339_fmt::RFC3339_FORMAT).to_string() },
             }),
         );
 
@@ -837,26 +839,33 @@ mod serde_tests {
                 "raw_cookie": "cookie5=value5",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).to_string() },
             }),
         );
+        dbg!(&at_utc);
         let max_age = test_utils::make_cookie(
             "cookie6=value6",
             "http://example.com/foo/bar",
             Some(at_utc),
             Some(10),
         );
+        dbg!(&max_age);
         let utc_tm = match max_age.expires {
-            CookieExpiration::AtUtc(ref utc_tm) => utc_tm,
+            CookieExpiration::AtUtc(ref utc_tm) => time::OffsetDateTime::parse(
+                utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT),
+                time::Format::Rfc3339,
+            )
+            .expect("could not re-parse time"),
             CookieExpiration::SessionEnd => unreachable!(),
         };
+        dbg!(&utc_tm);
         encode_decode(
             &max_age,
             json!({
                 "raw_cookie": "cookie6=value6",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).to_string() },
             }),
         );
 
@@ -876,7 +885,7 @@ mod serde_tests {
                 "raw_cookie": "cookie7=value7",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.rfc3339().to_string() },
+                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).to_string() },
             }),
         );
     }
