@@ -7,8 +7,8 @@ use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError}
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
+use std::fmt;
 use std::ops::Deref;
-use std::{error, fmt};
 use time;
 use url::Url;
 
@@ -33,29 +33,26 @@ pub enum Error {
     UnspecifiedDomain,
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::NonHttpScheme => "request-uri is not an http scheme but HttpOnly attribute set",
-            Error::NonRelativeScheme => {
-                "request-uri is not a relative scheme; cannot determine host"
-            }
-            Error::DomainMismatch => "request-uri does not domain-match the cookie",
-            Error::Expired => "attempted to utilize an Expired Cookie",
-            Error::Parse => "unable to parse string as cookie::Cookie",
-            Error::PublicSuffix => "domain-attribute value is a public suffix",
-            Error::UnspecifiedDomain => "domain-attribute is not specified",
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
-        None
-    }
-}
+impl std::error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", error::Error::description(self))
+        write!(
+            f,
+            "{}",
+            match *self {
+                Error::NonHttpScheme =>
+                    "request-uri is not an http scheme but HttpOnly attribute set",
+                Error::NonRelativeScheme => {
+                    "request-uri is not a relative scheme; cannot determine host"
+                }
+                Error::DomainMismatch => "request-uri does not domain-match the cookie",
+                Error::Expired => "attempted to utilize an Expired Cookie",
+                Error::Parse => "unable to parse string as cookie::Cookie",
+                Error::PublicSuffix => "domain-attribute value is a public suffix",
+                Error::UnspecifiedDomain => "domain-attribute is not specified",
+            }
+        )
     }
 }
 
