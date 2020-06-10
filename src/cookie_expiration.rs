@@ -21,7 +21,7 @@ impl From<Tm> for SerializableTm {
 }
 
 /// When a given `Cookie` expires
-#[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Eq, Clone, Debug, Serialize, Deserialize)]
 pub enum CookieExpiration {
     /// `Cookie` expires at the given UTC time, as set from either the Max-Age
     /// or Expires attribute of a Set-Cookie header
@@ -29,6 +29,23 @@ pub enum CookieExpiration {
     /// `Cookie` expires at the end of the current `Session`; this means the cookie
     /// is not persistent
     SessionEnd,
+}
+
+// We directly impl `PartialEq` as the cookie Expires attribute does not include nanosecond precision
+impl std::cmp::PartialEq for CookieExpiration {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (CookieExpiration::SessionEnd, CookieExpiration::SessionEnd) => true,
+            (CookieExpiration::AtUtc(this_offset), CookieExpiration::AtUtc(other_offset)) => {
+                // All instances should already be UTC offset
+                this_offset.date() == other_offset.date()
+                    && this_offset.time().hour() == other_offset.time().hour()
+                    && this_offset.time().minute() == other_offset.time().minute()
+                    && this_offset.time().second() == other_offset.time().second()
+            }
+            _ => false,
+        }
+    }
 }
 
 impl CookieExpiration {
