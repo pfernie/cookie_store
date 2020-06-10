@@ -1,3 +1,7 @@
+= v0.12.0 =
+* Upgrade to `cookie 0.14`
+* Upgrade to `time 0.2`
+
 = v0.11.0 =
 * Implement `{De,}Serialize` for `CookieStore` (@Felerius)
   
