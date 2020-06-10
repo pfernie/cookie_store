@@ -2,7 +2,7 @@
 authors = ["patrick.fernie@gmail.com"]
 description = "Implementation of Cookie storage and retrieval"
 name = "cookie_store"
-version = "0.11.0"
+version = "0.12.0"
 edition = "2018"
 repository = "https://github.com/pfernie/cookie_store"
 documentation = "https://docs.rs/cookie_store"
