@@ -29,3 +29,31 @@ impl From<idna::Errors> for IdnaErrors {
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub(crate) mod rfc3339_fmt {
+    use serde::{de::Error, Deserialize};
+
+    pub(crate) const RFC3339_FORMAT: &'static str = "%Y-%m-%dT%H:%M:%SZ";
+    pub(super) fn serialize<S>(t: &time::OffsetDateTime, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // An explicit format string is used here, instead of time::Format::Rfc3339, to explicitly
+        // utilize the 'Z' terminator instead of +00:00 format for Zulu time.
+        let s = t.format(RFC3339_FORMAT);
+        serializer.serialize_str(&s)
+    }
+
+    pub(super) fn deserialize<'de, D>(t: D) -> Result<time::OffsetDateTime, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(t)?;
+        time::OffsetDateTime::parse(&s, time::Format::Rfc3339).map_err(|e| {
+            D::Error::custom(format!(
+                "Could not parse string '{}' as RFC3339 UTC format: {}",
+                s, e
+            ))
+        })
+    }
+}
