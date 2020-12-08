@@ -10,6 +10,30 @@ mod cookie_store;
 pub use crate::cookie_store::CookieStore;
 mod utils;
 
+#[cfg(feature = "reqwest_impl")]
+impl reqwest::cookie::CookieStorage for CookieStore {
+    fn store_cookie_headers(&mut self, cookie_headers: Vec<&str>, url: &url::Url) {
+        for cookie in cookie_headers {
+            let _ = self.parse(cookie, url);
+        }
+    }
+
+    fn get_cookie_headers(&self, url: &url::Url) -> Vec<String> {
+        self.matches(url)
+            .into_iter()
+            .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
+            .collect()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
 #[derive(Debug)]
 pub struct IdnaErrors(idna::Errors);
 
