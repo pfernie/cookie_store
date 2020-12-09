@@ -11,7 +11,7 @@ pub use crate::cookie_store::CookieStore;
 mod utils;
 
 #[cfg(feature = "reqwest_impl")]
-impl reqwest::cookie::CookieStorage for CookieStore {
+impl reqwest::cookie::CookieStore for CookieStore {
     fn store_cookie_headers(&mut self, cookie_headers: Vec<&str>, url: &url::Url) {
         for cookie in cookie_headers {
             let _ = self.parse(cookie, url);
