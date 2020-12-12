@@ -11,20 +11,90 @@ pub use crate::cookie_store::CookieStore;
 mod utils;
 
 #[cfg(feature = "reqwest_impl")]
-impl reqwest::cookie::CookieStore for CookieStore {
-    fn set_cookies(&mut self, cookie_headers: Vec<&str>, url: &url::Url) {
-        for cookie in cookie_headers {
-            let _ = self.parse(cookie, url);
+mod reqwest_impl {
+    use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+    use crate::CookieStore;
+
+    /// A `CookieStore` wrapped internally by a `std::sync::Mutex`, suitable for use in
+    /// async/concurrent contexts.
+    #[derive(Debug)]
+    pub struct CookieStoreMutex(Mutex<CookieStore>);
+
+    impl CookieStoreMutex {
+        pub fn new(cookie_store: CookieStore) -> CookieStoreMutex {
+            CookieStoreMutex(Mutex::new(cookie_store))
+        }
+
+        pub fn lock(
+            &self,
+        ) -> Result<MutexGuard<CookieStore>, PoisonError<MutexGuard<CookieStore>>> {
+            self.0.lock()
         }
     }
 
-    fn cookies(&self, url: &url::Url) -> Vec<String> {
-        self.matches(url)
-            .into_iter()
-            .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
-            .collect()
+    impl reqwest::cookie::CookieStore for CookieStoreMutex {
+        fn set_cookies(&self, cookie_headers: Vec<&str>, url: &url::Url) {
+            let mut store = self.0.lock().unwrap();
+            for cookie in cookie_headers {
+                let _ = store.parse(cookie, url);
+            }
+        }
+
+        fn cookies(&self, url: &url::Url) -> Vec<String> {
+            let store = self.0.lock().unwrap();
+            store
+                .matches(url)
+                .into_iter()
+                .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
+                .collect()
+        }
+    }
+
+    /// A `CookieStore` wrapped internally by a `std::sync::RwLock`, suitable for use in
+    /// async/concurrent contexts.
+    #[derive(Debug)]
+    pub struct CookieStoreRwLock(RwLock<CookieStore>);
+
+    impl CookieStoreRwLock {
+        pub fn new(cookie_store: CookieStore) -> CookieStoreRwLock {
+            CookieStoreRwLock(RwLock::new(cookie_store))
+        }
+
+        pub fn read(
+            &self,
+        ) -> Result<RwLockReadGuard<CookieStore>, PoisonError<RwLockReadGuard<CookieStore>>>
+        {
+            self.0.read()
+        }
+
+        pub fn write(
+            &self,
+        ) -> Result<RwLockWriteGuard<CookieStore>, PoisonError<RwLockWriteGuard<CookieStore>>>
+        {
+            self.0.write()
+        }
+    }
+
+    impl reqwest::cookie::CookieStore for CookieStoreRwLock {
+        fn set_cookies(&self, cookie_headers: Vec<&str>, url: &url::Url) {
+            let mut write = self.0.write().unwrap();
+            for cookie in cookie_headers {
+                let _ = write.parse(cookie, url);
+            }
+        }
+
+        fn cookies(&self, url: &url::Url) -> Vec<String> {
+            let read = self.0.read().unwrap();
+            read.matches(url)
+                .into_iter()
+                .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
+                .collect()
+        }
     }
 }
+#[cfg(feature = "reqwest_impl")]
+pub use reqwest_impl::{CookieStoreMutex, CookieStoreRwLock};
 
 #[derive(Debug)]
 pub struct IdnaErrors(idna::Errors);
