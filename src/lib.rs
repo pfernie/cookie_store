@@ -21,6 +21,12 @@ mod reqwest_impl {
     #[derive(Debug)]
     pub struct CookieStoreMutex(Mutex<CookieStore>);
 
+    impl Default for CookieStoreMutex {
+        fn default() -> Self {
+            CookieStoreMutex::new(CookieStore::default())
+        }
+    }
+
     impl CookieStoreMutex {
         pub fn new(cookie_store: CookieStore) -> CookieStoreMutex {
             CookieStoreMutex(Mutex::new(cookie_store))
@@ -55,6 +61,12 @@ mod reqwest_impl {
     /// async/concurrent contexts.
     #[derive(Debug)]
     pub struct CookieStoreRwLock(RwLock<CookieStore>);
+
+    impl Default for CookieStoreRwLock {
+        fn default() -> Self {
+            CookieStoreRwLock::new(CookieStore::default())
+        }
+    }
 
     impl CookieStoreRwLock {
         pub fn new(cookie_store: CookieStore) -> CookieStoreRwLock {
