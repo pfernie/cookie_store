@@ -39,6 +39,6 @@ features = ["percent-encode"]
 version = "0.14.1"
 
 [dev-dependencies]
-env_logger = "0.7.1"
-pretty_assertions = "0.6.1"
+env_logger = "0.8.3"
+pretty_assertions = "0.7.1"
 tokio-test = "^0.4.1"
