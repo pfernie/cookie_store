@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! # cookie_store
 //! Provides an implementation for storing and retrieving [`Cookie`]s per the path and domain matching
 //! rules specified in [RFC6265](http://tools.ietf.org/html/rfc6265).

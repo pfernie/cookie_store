@@ -1,3 +1,6 @@
+= v0.13.3 =
+* Fix attributes & configuration for feature support in docs.rs
+
 = v0.13.0 =
 * Introduce optional feature `reqwest_impl`, providing implementations of the `reqwest::cookie::CookieStore` trait
 * Upgrade to `reqwest 0.11.2`
