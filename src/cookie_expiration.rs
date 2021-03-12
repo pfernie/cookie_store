@@ -67,6 +67,15 @@ impl From<time::OffsetDateTime> for CookieExpiration {
     }
 }
 
+impl From<cookie::Expiration> for CookieExpiration {
+    fn from(expiration: cookie::Expiration) -> CookieExpiration {
+        match expiration {
+            cookie::Expiration::DateTime(offset) => CookieExpiration::AtUtc(offset),
+            cookie::Expiration::Session => CookieExpiration::SessionEnd,
+        }
+    }
+}
+
 impl From<time::Duration> for CookieExpiration {
     fn from(duration: time::Duration) -> Self {
         // If delta-seconds is less than or equal to zero (0), let expiry-time

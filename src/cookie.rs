@@ -200,8 +200,8 @@ impl<'a> Cookie<'a> {
         // only
         let expires = if let Some(max_age) = raw_cookie.max_age() {
             CookieExpiration::from(max_age)
-        } else if let Some(utc_tm) = raw_cookie.expires() {
-            CookieExpiration::from(utc_tm)
+        } else if let Some(expiration) = raw_cookie.expires() {
+            CookieExpiration::from(expiration)
         } else {
             CookieExpiration::SessionEnd
         };
