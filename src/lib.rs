@@ -1,3 +1,89 @@
+//! # cookie_store
+//! Provides an implementation for storing and retrieving [`Cookie`]s per the path and domain matching
+//! rules specified in [RFC6265](http://tools.ietf.org/html/rfc6265).
+//!
+//! ## Feature `preserve_order`
+//! If enabled, [`CookieStore`] will use [`indexmap::IndexMap`] internally, and [`Cookie`]
+//! insertion order will be preserved. Adds dependency `indexmap`.
+//!
+//! ## Feature `reqwest_impl`
+//! If enabled, implementations of the [`reqwest::cookie::CookieStore`] trait are provided. As
+//! these are intended for usage in async/concurrent contexts, these implementations use locking
+//! primitives [`std::sync::Mutex`] ([`CookieStoreMutex`]) or [`std::sync::RwLock`]
+//! ([`CookieStoreRwLock`]).
+//!
+//! ## Example
+//! The following example demonstrates loading a [`CookieStore`] from disk, and using it within a
+//! [`CookieStoreMutex`]. It then makes a series of request, examining and modifying the contents
+//! of the underlying [`CookieStore`] in between.
+//! ```no_run
+//! # tokio_test::block_on(async {
+//! // Load an existing set of cookies, serialized as json
+//! let cookie_store = {
+//!   let file = std::fs::File::open("cookies.json")
+//!       .map(std::io::BufReader::new)
+//!       .unwrap();
+//!   cookie_store::CookieStore::load_json(file).unwrap()
+//! };
+//! let cookie_store = cookie_store::CookieStoreMutex::new(cookie_store);
+//! let cookie_store = std::sync::Arc::new(cookie_store);
+//! {
+//!   // Examine initial contents
+//!   println!("initial load");
+//!   let store = cookie_store.lock().unwrap();
+//!   for c in store.iter_any() {
+//!     println!("{:?}", c);
+//!   }
+//! }
+//!
+//! // Build a `reqwest` Client, providing the deserialized store
+//! let client = reqwest::Client::builder()
+//!     .cookie_provider(std::sync::Arc::clone(&cookie_store))
+//!     .build()
+//!     .unwrap();
+//!
+//! // Make a sample request
+//! client.get("https://google.com").send().await.unwrap();
+//! {
+//!   // Examine the contents of the store.
+//!   println!("after google.com GET");
+//!   let store = cookie_store.lock().unwrap();
+//!   for c in store.iter_any() {
+//!     println!("{:?}", c);
+//!   }
+//! }
+//!
+//! // Make another request from another domain
+//! println!("GET from msn");
+//! client.get("https://msn.com").send().await.unwrap();
+//! {
+//!   // Examine the contents of the store.
+//!   println!("after msn.com GET");
+//!   let mut store = cookie_store.lock().unwrap();
+//!   for c in store.iter_any() {
+//!     println!("{:?}", c);
+//!   }
+//!   // Clear the store, and examine again
+//!   store.clear();
+//!   println!("after clear");
+//!   for c in store.iter_any() {
+//!     println!("{:?}", c);
+//!   }
+//! }
+//!
+//! // Get some new cookies
+//! client.get("https://google.com").send().await.unwrap();
+//! {
+//!   // Write store back to disk
+//!   let mut writer = std::fs::File::create("cookies2.json")
+//!       .map(std::io::BufWriter::new)
+//!       .unwrap();
+//!   let store = cookie_store.lock().unwrap();
+//!   store.save_json(&mut writer).unwrap();
+//! }
+//! # });
+//!```
+
 use idna;
 
 mod cookie;
@@ -11,101 +97,10 @@ pub use crate::cookie_store::CookieStore;
 mod utils;
 
 #[cfg(feature = "reqwest_impl")]
-mod reqwest_impl {
-    use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
-
-    use crate::CookieStore;
-
-    /// A `CookieStore` wrapped internally by a `std::sync::Mutex`, suitable for use in
-    /// async/concurrent contexts.
-    #[derive(Debug)]
-    pub struct CookieStoreMutex(Mutex<CookieStore>);
-
-    impl Default for CookieStoreMutex {
-        fn default() -> Self {
-            CookieStoreMutex::new(CookieStore::default())
-        }
-    }
-
-    impl CookieStoreMutex {
-        pub fn new(cookie_store: CookieStore) -> CookieStoreMutex {
-            CookieStoreMutex(Mutex::new(cookie_store))
-        }
-
-        pub fn lock(
-            &self,
-        ) -> Result<MutexGuard<CookieStore>, PoisonError<MutexGuard<CookieStore>>> {
-            self.0.lock()
-        }
-    }
-
-    impl reqwest::cookie::CookieStore for CookieStoreMutex {
-        fn set_cookies(&self, cookie_headers: Vec<&str>, url: &url::Url) {
-            let mut store = self.0.lock().unwrap();
-            for cookie in cookie_headers {
-                let _ = store.parse(cookie, url);
-            }
-        }
-
-        fn cookies(&self, url: &url::Url) -> Vec<String> {
-            let store = self.0.lock().unwrap();
-            store
-                .matches(url)
-                .into_iter()
-                .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
-                .collect()
-        }
-    }
-
-    /// A `CookieStore` wrapped internally by a `std::sync::RwLock`, suitable for use in
-    /// async/concurrent contexts.
-    #[derive(Debug)]
-    pub struct CookieStoreRwLock(RwLock<CookieStore>);
-
-    impl Default for CookieStoreRwLock {
-        fn default() -> Self {
-            CookieStoreRwLock::new(CookieStore::default())
-        }
-    }
-
-    impl CookieStoreRwLock {
-        pub fn new(cookie_store: CookieStore) -> CookieStoreRwLock {
-            CookieStoreRwLock(RwLock::new(cookie_store))
-        }
-
-        pub fn read(
-            &self,
-        ) -> Result<RwLockReadGuard<CookieStore>, PoisonError<RwLockReadGuard<CookieStore>>>
-        {
-            self.0.read()
-        }
-
-        pub fn write(
-            &self,
-        ) -> Result<RwLockWriteGuard<CookieStore>, PoisonError<RwLockWriteGuard<CookieStore>>>
-        {
-            self.0.write()
-        }
-    }
-
-    impl reqwest::cookie::CookieStore for CookieStoreRwLock {
-        fn set_cookies(&self, cookie_headers: Vec<&str>, url: &url::Url) {
-            let mut write = self.0.write().unwrap();
-            for cookie in cookie_headers {
-                let _ = write.parse(cookie, url);
-            }
-        }
-
-        fn cookies(&self, url: &url::Url) -> Vec<String> {
-            let read = self.0.read().unwrap();
-            read.matches(url)
-                .into_iter()
-                .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
-                .collect()
-        }
-    }
-}
+#[cfg_attr(docsrs, doc(cfg(feature = "reqwest_impl")))]
+mod reqwest_impl;
 #[cfg(feature = "reqwest_impl")]
+#[cfg_attr(docsrs, doc(cfg(feature = "reqwest_impl")))]
 pub use reqwest_impl::{CookieStoreMutex, CookieStoreRwLock};
 
 #[derive(Debug)]

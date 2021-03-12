@@ -9,13 +9,17 @@ documentation = "https://docs.rs/cookie_store"
 readme = "README.md"
 license = "MIT/Apache-2.0"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "doscrs"]
+
 [features]
 default = ["reqwest_impl"]
 
 # uses `indexmap::IndexMap` in lieu of HashMap internally, so cookies are maintained in insertion/creation order
 preserve_order = ["indexmap"]
 # provide an implementation of `reqwest::cookie::CookieStorage`
-reqwest_impl = ["reqwest"]
+reqwest_impl = ["reqwest", "bytes"]
 
 [dependencies]
 idna = "0.2.0"
@@ -27,8 +31,8 @@ time = "0.2.16"
 url = "2.1.1"
 
 indexmap = { version = "1.4.0", optional = true }
-# reqwest = { version = "^0.10.9", optional = true }
-reqwest = { git = "https://github.com/pfernie/reqwest", branch="cookie-storage", optional = true, features = ["cookies"] }
+reqwest = { version = "^0.11.2", optional = true, features = ["cookies"] }
+bytes = { version = "1", optional = true }
 
 [dependencies.cookie]
 features = ["percent-encode"]
@@ -37,3 +41,4 @@ version = "0.14.1"
 [dev-dependencies]
 env_logger = "0.7.1"
 pretty_assertions = "0.6.1"
+tokio-test = "^0.4.1"
