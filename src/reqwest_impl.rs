@@ -40,7 +40,7 @@ impl CookieStore {
 }
 
 /// A [`CookieStore`] wrapped internally by a [`std::sync::Mutex`], suitable for use in
-/// async/concurrent contexts.
+/// async/concurrent contexts. (requires feature `reqwest_impl`)
 #[derive(Debug)]
 pub struct CookieStoreMutex(Mutex<CookieStore>);
 
@@ -76,7 +76,7 @@ impl reqwest::cookie::CookieStore for CookieStoreMutex {
 }
 
 /// A [`CookieStore`] wrapped internally by a [`std::sync::RwLock`], suitable for use in
-/// async/concurrent contexts.
+/// async/concurrent contexts. (requires feature `reqwest_impl`)
 #[derive(Debug)]
 pub struct CookieStoreRwLock(RwLock<CookieStore>);
 
