@@ -1,3 +1,10 @@
+= v0.13.0 =
+* Introduce optional feature `reqwest_impl`, providing implementations of the `reqwest::cookie::CookieStore` trait
+* Upgrade to `reqwest 0.11.2`
+* Upgrade to `env_logger 0.8`
+* Upgrade to `pretty_assertions 0.7`
+* Upgrade to `cookie 0.15`
+
 = v0.12.0 =
 * Upgrade to `cookie 0.14`
 * Upgrade to `time 0.2`
