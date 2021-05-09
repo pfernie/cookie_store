@@ -7,83 +7,9 @@
 //! If enabled, [`CookieStore`] will use [`indexmap::IndexMap`] internally, and [`Cookie`]
 //! insertion order will be preserved. Adds dependency `indexmap`.
 //!
-//! ## Feature `reqwest_impl`
-//! If enabled, implementations of the [`reqwest::cookie::CookieStore`] trait are provided. As
-//! these are intended for usage in async/concurrent contexts, these implementations use locking
-//! primitives [`std::sync::Mutex`] ([`CookieStoreMutex`]) or [`std::sync::RwLock`]
-//! ([`CookieStoreRwLock`]).
-//!
 //! ## Example
-//! The following example demonstrates loading a [`CookieStore`] from disk, and using it within a
-//! [`CookieStoreMutex`]. It then makes a series of request, examining and modifying the contents
-//! of the underlying [`CookieStore`] in between.
-//! ```no_run
-//! # tokio_test::block_on(async {
-//! // Load an existing set of cookies, serialized as json
-//! let cookie_store = {
-//!   let file = std::fs::File::open("cookies.json")
-//!       .map(std::io::BufReader::new)
-//!       .unwrap();
-//!   cookie_store::CookieStore::load_json(file).unwrap()
-//! };
-//! let cookie_store = cookie_store::CookieStoreMutex::new(cookie_store);
-//! let cookie_store = std::sync::Arc::new(cookie_store);
-//! {
-//!   // Examine initial contents
-//!   println!("initial load");
-//!   let store = cookie_store.lock().unwrap();
-//!   for c in store.iter_any() {
-//!     println!("{:?}", c);
-//!   }
-//! }
-//!
-//! // Build a `reqwest` Client, providing the deserialized store
-//! let client = reqwest::Client::builder()
-//!     .cookie_provider(std::sync::Arc::clone(&cookie_store))
-//!     .build()
-//!     .unwrap();
-//!
-//! // Make a sample request
-//! client.get("https://google.com").send().await.unwrap();
-//! {
-//!   // Examine the contents of the store.
-//!   println!("after google.com GET");
-//!   let store = cookie_store.lock().unwrap();
-//!   for c in store.iter_any() {
-//!     println!("{:?}", c);
-//!   }
-//! }
-//!
-//! // Make another request from another domain
-//! println!("GET from msn");
-//! client.get("https://msn.com").send().await.unwrap();
-//! {
-//!   // Examine the contents of the store.
-//!   println!("after msn.com GET");
-//!   let mut store = cookie_store.lock().unwrap();
-//!   for c in store.iter_any() {
-//!     println!("{:?}", c);
-//!   }
-//!   // Clear the store, and examine again
-//!   store.clear();
-//!   println!("after clear");
-//!   for c in store.iter_any() {
-//!     println!("{:?}", c);
-//!   }
-//! }
-//!
-//! // Get some new cookies
-//! client.get("https://google.com").send().await.unwrap();
-//! {
-//!   // Write store back to disk
-//!   let mut writer = std::fs::File::create("cookies2.json")
-//!       .map(std::io::BufWriter::new)
-//!       .unwrap();
-//!   let store = cookie_store.lock().unwrap();
-//!   store.save_json(&mut writer).unwrap();
-//! }
-//! # });
-//!```
+//! Please refer to the [reqwest_cookie_store](https://crates.io/crates/reqwest_cookie_store) for
+//! an example of using this library along with [reqwest](https://crates.io/crates/reqwest).
 
 use idna;
 
@@ -96,13 +22,6 @@ mod cookie_path;
 mod cookie_store;
 pub use crate::cookie_store::CookieStore;
 mod utils;
-
-#[cfg(feature = "reqwest_impl")]
-#[cfg_attr(docsrs, doc(cfg(feature = "reqwest_impl")))]
-mod reqwest_impl;
-#[cfg(feature = "reqwest_impl")]
-#[cfg_attr(docsrs, doc(cfg(feature = "reqwest_impl")))]
-pub use reqwest_impl::{CookieStoreMutex, CookieStoreRwLock};
 
 #[derive(Debug)]
 pub struct IdnaErrors(idna::Errors);
