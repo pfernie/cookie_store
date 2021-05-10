@@ -2,12 +2,14 @@
 authors = ["Patrick Fernie <patrick.fernie@gmail.com>"]
 description = "Implementation of Cookie storage and retrieval"
 name = "cookie_store"
-version = "0.13.3"
+version = "0.14.0"
 edition = "2018"
 repository = "https://github.com/pfernie/cookie_store"
 documentation = "https://docs.rs/cookie_store"
 readme = "README.md"
 license = "MIT/Apache-2.0"
+keywords = ["cookie", "jar", "store", "http"]  # free text
+categories = ["web-programming::http-client", "web-programming"]  # https://crates.io/category_slugs
 
 [package.metadata.docs.rs]
 all-features = true

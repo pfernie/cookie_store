@@ -1,3 +1,11 @@
+= v0.14.0 =
+* **BREAKING** The `CookieStoreMutex` and `CookieStoreRwLock` implementation previously provided under the `reqwest_impl` feature have been migrated to a dedicated crate, `reqwest_cookie_store`, and the feature has been removed.
+* **BREAKING** `reqwest` is no longer a direct depdency, but rather a `dev-depedency`. Furthermore, now only the needed `reqwest` features (`cookies`) are enabled, as opposed to all default features. This is potentially a breaking change for users.
+* `reqwest` is no longer an optional dependency, it is now a `dev-dependency` for doctests.
+  * Only enable the needed features for `reqwest` (@blyxxyz)
+* Upgrade `publisuffix` dependency to `v2` (@rushmorem)
+* Remove unused dev-dependencies
+
 = v0.13.3 =
 * Fix attributes & configuration for feature support in docs.rs
 
