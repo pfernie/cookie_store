@@ -1,3 +1,7 @@
+= v0.14.1 =
+* Improve documentation on `CookieStore::get_request_cookies`
+* Introduce alternative `CookieStore::get_request_values`, mark `CookieStore::get_request_cookies` as deprecated, and suggest usage of `get_request_values` instead.
+
 = v0.14.0 =
 * **BREAKING** The `CookieStoreMutex` and `CookieStoreRwLock` implementation previously provided under the `reqwest_impl` feature have been migrated to a dedicated crate, `reqwest_cookie_store`, and the feature has been removed.
 * **BREAKING** `reqwest` is no longer a direct depdency, but rather a `dev-depedency`. Furthermore, now only the needed `reqwest` features (`cookies`) are enabled, as opposed to all default features. This is potentially a breaking change for users.

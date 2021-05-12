@@ -53,9 +53,24 @@ pub struct CookieStore {
 }
 
 impl CookieStore {
-    /// Return an `Iterator` of the cookies for `url` in the store
+    #[deprecated(
+        since = "0.14.1",
+        note = "Please use the `get_request_values` function instead"
+    )]
+    /// Return an `Iterator` of the cookies for `url` in the store, suitable for submitting in an
+    /// HTTP request. As the items are intended for use in creating a `Cookie` header in a GET request,
+    /// they may contain only the `name` and `value` of a received cookie, eliding other parameters
+    /// such as `path` or `expires`. For iteration over `Cookie` instances containing all data, please
+    /// refer to [`CookieStore::matches`].
     pub fn get_request_cookies(&self, url: &Url) -> impl Iterator<Item = &RawCookie<'static>> {
         self.matches(url).into_iter().map(|c| c.deref())
+    }
+
+    /// Return an `Iterator` of the cookie (`name`, `value`) pairs for `url` in the store, suitable
+    /// for use in the `Cookie` header of an HTTP request. For iteration over `Cookie` instances,
+    /// please refer to [`CookieStore::matches`].
+    pub fn get_request_values(&self, url: &Url) -> impl Iterator<Item = (&str, &str)> {
+        self.matches(url).into_iter().map(|c| c.name_value())
     }
 
     /// Store the `cookies` received from `url`
