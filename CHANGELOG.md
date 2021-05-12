@@ -1,3 +1,7 @@
+= v0.15.0 =
+* deprecation in `v0.14.1` should have qualified as minor version bump
+* Upgrade dependencies
+
 = v0.14.1 =
 * Improve documentation on `CookieStore::get_request_cookies`
 * Introduce alternative `CookieStore::get_request_values`, mark `CookieStore::get_request_cookies` as deprecated, and suggest usage of `get_request_values` instead.
