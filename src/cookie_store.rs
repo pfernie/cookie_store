@@ -1470,6 +1470,23 @@ mod tests {
     }
 
     #[test]
+    fn localhost_is_secure() {
+        let mut store = CookieStore::default();
+        inserted!(add_cookie(
+            &mut store,
+            "cookie1=1a; Secure",
+            "http://localhost/",
+            None,
+            None,
+        ));
+        matches_are(
+            &store,
+            "http://localhost/",
+            vec!["cookie1=1a"],
+        );
+    }
+
+    #[test]
     fn domain_collisions() {
         let mut store = CookieStore::default();
         // - HostOnly, so no collisions here

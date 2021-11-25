@@ -33,7 +33,7 @@ pub fn is_host_name(host: &str) -> bool {
 }
 
 pub fn is_secure(url: &Url) -> bool {
-    url.scheme() == "https"
+    url.scheme() == "https" || url.host() == Some(url::Host::Domain("localhost"))
 }
 
 #[cfg(test)]
