@@ -1,3 +1,6 @@
+= v0.15.1 =
+* Attach `Secure` cookies to requests for `http://localhost`
+  
 = v0.15.0 =
 * deprecation in `v0.14.1` should have qualified as minor version bump
 * Upgrade dependencies
