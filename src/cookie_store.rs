@@ -1470,20 +1470,28 @@ mod tests {
     }
 
     #[test]
-    fn localhost_is_secure() {
-        let mut store = CookieStore::default();
-        inserted!(add_cookie(
-            &mut store,
-            "cookie1=1a; Secure",
-            "http://localhost/",
-            None,
-            None,
-        ));
-        matches_are(
-            &store,
-            "http://localhost/",
-            vec!["cookie1=1a"],
-        );
+    fn some_non_https_uris_are_secure() {
+        // Matching the list in Firefox's regression test:
+        // https://hg.mozilla.org/integration/autoland/rev/c4d13b3ca1e2
+        let secure_uris = vec![
+          "http://localhost", "http://localhost:1234", "http://127.0.0.1",
+          "http://127.0.0.2", "http://127.1.0.1",      "http://[::1]",
+        ];
+        for secure_uri in secure_uris {
+            let mut store = CookieStore::default();
+            inserted!(add_cookie(
+                &mut store,
+                "cookie1=1a; Secure",
+                secure_uri,
+                None,
+                None,
+            ));
+            matches_are(
+                &store,
+                secure_uri,
+                vec!["cookie1=1a"],
+            );
+        }
     }
 
     #[test]
