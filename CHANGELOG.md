@@ -1,5 +1,5 @@
 = v0.15.1 =
-* Attach `Secure` cookies to requests for `http://localhost`
+* Attach `Secure` cookies to requests for `http://localhost` and loopback IP addresses (e.g. `127.0.0.1`). This change aligns `cookie_store`'s behaviour to the behaviour of [Chromium-based browsers](https://bugs.chromium.org/p/chromium/issues/detail?id=1177877#c7) and [Firefox](https://hg.mozilla.org/integration/autoland/rev/c4d13b3ca1e2).
   
 = v0.15.0 =
 * deprecation in `v0.14.1` should have qualified as minor version bump
