@@ -1,5 +1,5 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
-use url::ParseError as UrlError;
+use url::{ParseError as UrlError, Host};
 use url::Url;
 
 pub trait IntoUrl {
@@ -33,7 +33,18 @@ pub fn is_host_name(host: &str) -> bool {
 }
 
 pub fn is_secure(url: &Url) -> bool {
-    url.scheme() == "https" || url.host() == Some(url::Host::Domain("localhost"))
+    if url.scheme() == "https" {
+        return true;
+    }
+    if let Some(u) = url.host() {
+        match u {
+            Host::Domain(d) => d == "localhost",
+            Host::Ipv4(ip) => ip.is_loopback(),
+            Host::Ipv6(ip) => ip.is_loopback(),
+        }
+    } else {
+        false
+    }
 }
 
 #[cfg(test)]
