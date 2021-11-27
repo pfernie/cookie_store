@@ -2,7 +2,7 @@
 [![Documentation](https://docs.rs/cookie_store/badge.svg)](https://docs.rs/cookie_store)
 
 Provides an implementation for storing and retrieving `Cookie`s per the path and domain matching 
-rules specified in [RFC6265](http://tools.ietf.org/html/rfc6265).
+rules specified in [RFC6265](https://datatracker.ietf.org/doc/html/rfc6265).
 
 ## Features
 

@@ -47,7 +47,7 @@ pub enum CookieDomain {
 //
 //    *  The string is a host name (i.e., not an IP address).
 /// The concept of a domain match per [IETF RFC6265 Section
-/// 5.1.3](http://tools.ietf.org/html/rfc6265#section-5.1.3)
+/// 5.1.3](https://datatracker.ietf.org/doc/html/rfc6265#section-5.1.3)
 impl CookieDomain {
     /// Get the CookieDomain::HostOnly variant based on `request_url`. This is the effective behavior of
     /// setting the domain-attribute to empty
@@ -254,7 +254,7 @@ mod tests {
             CookieDomain::Empty,
             CookieDomain::try_from(".").expect("unable to parse domain")
         );
-        // per [IETF RFC6265 Section 5.2.3](https://tools.ietf.org/html/rfc6265#section-5.2.3)
+        // per [IETF RFC6265 Section 5.2.3](https://datatracker.ietf.org/doc/html/rfc6265#section-5.2.3)
         //If the first character of the attribute-value string is %x2E ("."):
         //
         //Let cookie-domain be the attribute-value without the leading %x2E

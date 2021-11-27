@@ -4,7 +4,7 @@ use std::ops::Deref;
 use url::Url;
 
 /// Returns true if `request_url` path-matches `path` per
-/// [IETF RFC6265 Section 5.1.4](http://tools.ietf.org/html/rfc6265#section-5.1.4)
+/// [IETF RFC6265 Section 5.1.4](https://datatracker.ietf.org/doc/html/rfc6265#section-5.1.4)
 pub fn is_match(path: &str, request_url: &Url) -> bool {
     CookiePath::parse(path).map_or(false, |cp| cp.matches(request_url))
 }
@@ -14,7 +14,7 @@ pub fn is_match(path: &str, request_url: &Url) -> bool {
 pub struct CookiePath(String, bool);
 impl CookiePath {
     /// Determine if `request_url` path-matches this `CookiePath` per
-    /// [IETF RFC6265 Section 5.1.4](http://tools.ietf.org/html/rfc6265#section-5.1.4)
+    /// [IETF RFC6265 Section 5.1.4](https://datatracker.ietf.org/doc/html/rfc6265#section-5.1.4)
     pub fn matches(&self, request_url: &Url) -> bool {
         if request_url.cannot_be_a_base() {
             false
@@ -55,7 +55,7 @@ impl CookiePath {
     // 4.  Output the characters of the uri-path from the first character up
     //     to, but not including, the right-most %x2F ("/").
     /// Determine the default-path of `request_url` per
-    /// [IETF RFC6265 Section 5.1.4](http://tools.ietf.org/html/rfc6265#section-5.1.4)
+    /// [IETF RFC6265 Section 5.1.4](https://datatracker.ietf.org/doc/html/rfc6265#section-5.1.4)
     pub fn default_path(request_url: &Url) -> CookiePath {
         let cp = if request_url.cannot_be_a_base() {
             // non-relative path scheme, default to "/" (uri-path "empty", case 2)

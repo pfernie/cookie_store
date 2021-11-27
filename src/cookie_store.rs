@@ -44,11 +44,11 @@ pub type InsertResult = Result<StoreAction, CookieError>;
 
 #[derive(Debug, Default)]
 /// An implementation for storing and retrieving [`Cookie`]s per the path and domain matching
-/// rules specified in [RFC6265](http://tools.ietf.org/html/rfc6265).
+/// rules specified in [RFC6265](https://datatracker.ietf.org/doc/html/rfc6265).
 pub struct CookieStore {
     /// Cookies stored by domain, path, then name
     cookies: DomainMap,
-    /// If set, enables [public suffix](https://tools.ietf.org/html/rfc6265#section-5.3) rejection based on the provided `publicsuffix::List`
+    /// If set, enables [public suffix](https://datatracker.ietf.org/doc/html/rfc6265#section-5.3) rejection based on the provided `publicsuffix::List`
     public_suffix_list: Option<publicsuffix::List>,
 }
 
@@ -88,7 +88,7 @@ impl CookieStore {
     }
 
     /// Specify a `publicsuffix::List` for the `CookieStore` to allow [public suffix
-    /// matching](https://tools.ietf.org/html/rfc6265#section-5.3)
+    /// matching](https://datatracker.ietf.org/doc/html/rfc6265#section-5.3)
     pub fn with_suffix_list(self, psl: publicsuffix::List) -> CookieStore {
         CookieStore {
             cookies: self.cookies,
@@ -250,7 +250,7 @@ impl CookieStore {
     }
 
     /// Inserts `cookie`, received from `request_url`, into the store, following the rules of the
-    /// [IETF RFC6265 Storage Model](http://tools.ietf.org/html/rfc6265#section-5.3). If the
+    /// [IETF RFC6265 Storage Model](https://datatracker.ietf.org/doc/html/rfc6265#section-5.3). If the
     /// `Cookie` is __unexpired__ and is successfully inserted, returns
     /// `Ok(StoreAction::Inserted)`. If the `Cookie` is __expired__ *and* matches an existing
     /// `Cookie` in the store, the existing `Cookie` wil be `expired()` and

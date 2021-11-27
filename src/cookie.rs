@@ -65,7 +65,7 @@ impl From<ParseError> for Error {
 
 pub type CookieResult<'a> = Result<Cookie<'a>, Error>;
 
-/// A cookie conforming more closely to [IETF RFC6265](http://tools.ietf.org/html/rfc6265)
+/// A cookie conforming more closely to [IETF RFC6265](https://datatracker.ietf.org/doc/html/rfc6265)
 #[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct Cookie<'a> {
     /// The parsed Set-Cookie data
@@ -81,7 +81,7 @@ pub struct Cookie<'a> {
     /// found
     pub domain: CookieDomain,
     /// For a persistent Cookie (see [IETF RFC6265 Section
-    /// 5.3](http://tools.ietf.org/html/rfc6265#section-5.3)),
+    /// 5.3](https://datatracker.ietf.org/doc/html/rfc6265#section-5.3)),
     /// the expiration time as defined by the Max-Age or Expires attribute,
     /// otherwise SessionEnd,
     /// indicating a non-persistent `Cookie` that should expire at the end of the
