@@ -1424,7 +1424,7 @@ mod tests {
             println!(
                 "==== {}: {} ====",
                 $e,
-                time::OffsetDateTime::now_utc().format(crate::rfc3339_fmt::RFC3339_FORMAT)
+                time::OffsetDateTime::now_utc().format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap()
             );
             for c in $i.iter_any() {
                 println!(

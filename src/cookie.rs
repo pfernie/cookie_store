@@ -804,8 +804,8 @@ mod serde_tests {
             }),
         );
 
-        let at_utc = time::date!(2015 - 08 - 11)
-            .with_time(time::time!(16:41:42))
+        let at_utc = time::macros::date!(2015 - 08 - 11)
+            .with_time(time::macros::time!(16:41:42))
             .assume_utc();
         encode_decode(
             &test_utils::make_cookie(
@@ -818,7 +818,7 @@ mod serde_tests {
                 "raw_cookie": "cookie4=value4",
                 "path": ["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": at_utc.format(crate::rfc3339_fmt::RFC3339_FORMAT).to_string() },
+                "expires": { "AtUtc": at_utc.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap().to_string() },
             }),
         );
 
@@ -839,7 +839,7 @@ mod serde_tests {
                 "raw_cookie": "cookie5=value5",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).to_string() },
+                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap().to_string() },
             }),
         );
         dbg!(&at_utc);
@@ -852,8 +852,8 @@ mod serde_tests {
         dbg!(&max_age);
         let utc_tm = match max_age.expires {
             CookieExpiration::AtUtc(ref utc_tm) => time::OffsetDateTime::parse(
-                utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT),
-                time::Format::Rfc3339,
+                &utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap(),
+                &time::format_description::well_known::Rfc3339,
             )
             .expect("could not re-parse time"),
             CookieExpiration::SessionEnd => unreachable!(),
@@ -865,7 +865,7 @@ mod serde_tests {
                 "raw_cookie": "cookie6=value6",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).to_string() },
+                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap().to_string() },
             }),
         );
 
@@ -885,7 +885,7 @@ mod serde_tests {
                 "raw_cookie": "cookie7=value7",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
-                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).to_string() },
+                "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap().to_string() },
             }),
         );
     }
