@@ -47,15 +47,15 @@ impl CookieExpiration {
     }
 }
 
-const MAX_RFC3339: time::OffsetDateTime = time::date!(9999 - 12 - 31)
-    .with_time(time::time!(23:59:59))
+const MAX_RFC3339: time::OffsetDateTime = time::macros::date!(9999 - 12 - 31)
+    .with_time(time::macros::time!(23:59:59))
     .assume_utc();
 impl From<u64> for CookieExpiration {
     fn from(max_age: u64) -> CookieExpiration {
         // make sure we don't trigger a panic! in Duration by restricting the seconds
         // to the max
         CookieExpiration::from(time::Duration::seconds(std::cmp::min(
-            time::Duration::max_value().whole_seconds() as u64,
+            time::Duration::MAX.whole_seconds() as u64,
             max_age,
         ) as i64))
     }
@@ -82,7 +82,7 @@ impl From<time::Duration> for CookieExpiration {
         //    be the earliest representable date and time.  Otherwise, let the
         //    expiry-time be the current date and time plus delta-seconds seconds.
         let utc_tm = if duration.is_zero() {
-            time::OffsetDateTime::unix_epoch()
+            time::OffsetDateTime::UNIX_EPOCH
         } else {
             let now_utc = time::OffsetDateTime::now_utc();
             let d = (MAX_RFC3339 - now_utc).min(duration);
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn max_age_bounds() {
-        match CookieExpiration::from(time::Duration::max_value().whole_seconds() as u64 + 1) {
+        match CookieExpiration::from(time::Duration::MAX.whole_seconds() as u64 + 1) {
             CookieExpiration::AtUtc(_) => assert!(true),
             _ => assert!(false),
         }
