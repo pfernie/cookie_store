@@ -1,4 +1,7 @@
-= v0.15.2 =
+= v0.16.0 =
+* Update of dependencies in public API in `0.15.2` should have qualified as minor version bump
+
+= v0.15.2 = __YANKED__
 * Upgrade dependencies
 
 = v0.15.1 =
