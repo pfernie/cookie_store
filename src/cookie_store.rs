@@ -429,8 +429,10 @@ impl CookieStore {
     }
 
     /// Create a `CookieStore` from an iterator of `Cookie` values. When
-    /// `include_expired` is `false`, any __expired__ cookies in the incoming
-    /// iterator will not be included in the produced `CookieStore`
+    /// `include_expired` is `true`, both __expired__ and __unexpired__ cookies in the incoming
+    /// iterator will be included in the produced `CookieStore`; otherwise, only
+    /// __unexpired__ cookies will be included, and __expired__ cookies filtered
+    /// out.
     pub fn from_cookies<I, E>(iter: I, include_expired: bool) -> Result<Self, E>
     where
         I: IntoIterator<Item = Result<Cookie<'static>, E>>,
