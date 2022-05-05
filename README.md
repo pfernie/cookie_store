@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/pfernie/cookie_store.svg?branch=master)](https://travis-ci.org/pfernie/cookie_store)
+[![Build Status](https://github.com/pfernie/cookie_store/actions/workflows/ci.yml/badge.svg)](https://github.com/pfernie/cookie_store/actions/workflows/ci.yml)
 [![Documentation](https://docs.rs/cookie_store/badge.svg)](https://docs.rs/cookie_store)
 
 Provides an implementation for storing and retrieving `Cookie`s per the path and domain matching 
