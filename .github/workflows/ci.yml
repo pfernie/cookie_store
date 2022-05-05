@@ -1,0 +1,46 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    
+    strategy:
+      matrix:
+        name:
+          - linux / stable
+        include:
+          - name: linux / stable
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3l
+      
+    - name: Install rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust || 'stable' }}
+        profile: minimal
+        override: true
+        
+    - name: Build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose --all-features
+        
+    - name: Run tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --verbose --all-features
