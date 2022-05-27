@@ -386,16 +386,36 @@ impl CookieStore {
         F: Fn(&str) -> Result<Cookie<'static>, E>,
         crate::Error: From<E>,
     {
-        let cookies = reader.lines().filter_map(|line_result| {
-            let cookie = line_result
+        CookieStore::load_from(reader, cookie_from_str, false)
+    }
+
+    /// Load cookies from `reader`, deserializing with `cookie_from_str`, loading both __unexpired__
+    /// and __expired__ cookies
+    pub fn load_all<R, E, F>(reader: R, cookie_from_str: F) -> StoreResult<CookieStore>
+    where
+        R: BufRead,
+        F: Fn(&str) -> Result<Cookie<'static>, E>,
+        crate::Error: From<E>,
+    {
+        CookieStore::load_from(reader, cookie_from_str, true)
+    }
+
+    fn load_from<R, E, F>(
+        reader: R,
+        cookie_from_str: F,
+        include_expired: bool,
+    ) -> StoreResult<CookieStore>
+    where
+        R: BufRead,
+        F: Fn(&str) -> Result<Cookie<'static>, E>,
+        crate::Error: From<E>,
+    {
+        let cookies = reader.lines().map(|line_result| {
+            line_result
                 .map_err(Into::into)
-                .and_then(|line| cookie_from_str(&line).map_err(crate::Error::from));
-            match cookie {
-                Ok(c) if c.is_expired() => None,
-                _ => Some(cookie),
-            }
+                .and_then(|line| cookie_from_str(&line).map_err(crate::Error::from))
         });
-        Self::from_cookies(cookies)
+        Self::from_cookies(cookies, include_expired)
     }
 
     /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
@@ -403,14 +423,24 @@ impl CookieStore {
         CookieStore::load(reader, |cookie| ::serde_json::from_str(cookie))
     }
 
-    fn from_cookies<I, E>(iter: I) -> Result<Self, E>
+    /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
+    pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
+        CookieStore::load_all(reader, |cookie| ::serde_json::from_str(cookie))
+    }
+
+    /// Create a `CookieStore` from an iterator of `Cookie` values. When
+    /// `include_expired` is `true`, both __expired__ and __unexpired__ cookies in the incoming
+    /// iterator will be included in the produced `CookieStore`; otherwise, only
+    /// __unexpired__ cookies will be included, and __expired__ cookies filtered
+    /// out.
+    pub fn from_cookies<I, E>(iter: I, include_expired: bool) -> Result<Self, E>
     where
         I: IntoIterator<Item = Result<Cookie<'static>, E>>,
     {
         let mut cookies = Map::new();
         for cookie in iter {
             let cookie = cookie?;
-            if !cookie.is_expired() {
+            if include_expired || !cookie.is_expired() {
                 cookies
                     .entry(String::from(&cookie.domain))
                     .or_insert_with(Map::new)
@@ -448,7 +478,7 @@ impl<'de> Visitor<'de> for CookieStoreVisitor {
     where
         A: SeqAccess<'de>,
     {
-        CookieStore::from_cookies(iter::from_fn(|| seq.next_element().transpose()))
+        CookieStore::from_cookies(iter::from_fn(|| seq.next_element().transpose()), false)
     }
 }
 
@@ -1424,7 +1454,9 @@ mod tests {
             println!(
                 "==== {}: {} ====",
                 $e,
-                time::OffsetDateTime::now_utc().format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap()
+                time::OffsetDateTime::now_utc()
+                    .format(crate::rfc3339_fmt::RFC3339_FORMAT)
+                    .unwrap()
             );
             for c in $i.iter_any() {
                 println!(
