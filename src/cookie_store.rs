@@ -3,15 +3,14 @@ use std::io::{BufRead, Write};
 use std::iter;
 use std::ops::Deref;
 
-use ::cookie::Cookie as RawCookie;
+use cookie::Cookie as RawCookie;
 use log::debug;
-use publicsuffix;
 use serde::de::{SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use url::Url;
 
 use crate::cookie::Cookie;
-use crate::cookie_domain::{is_match as domain_match, CookieDomain};
+use crate::cookie_domain::is_match as domain_match;
 use crate::cookie_path::is_match as path_match;
 use crate::utils::{is_http_scheme, is_secure};
 use crate::CookieError;
@@ -48,6 +47,7 @@ pub type InsertResult = Result<StoreAction, CookieError>;
 pub struct CookieStore {
     /// Cookies stored by domain, path, then name
     cookies: DomainMap,
+    #[cfg(feature = "public_suffix")]
     /// If set, enables [public suffix](https://datatracker.ietf.org/doc/html/rfc6265#section-5.3) rejection based on the provided `publicsuffix::List`
     public_suffix_list: Option<publicsuffix::List>,
 }
@@ -89,6 +89,7 @@ impl CookieStore {
 
     /// Specify a `publicsuffix::List` for the `CookieStore` to allow [public suffix
     /// matching](https://datatracker.ietf.org/doc/html/rfc6265#section-5.3)
+    #[cfg(feature = "public_suffix")]
     pub fn with_suffix_list(self, psl: publicsuffix::List) -> CookieStore {
         CookieStore {
             cookies: self.cookies,
@@ -255,13 +256,17 @@ impl CookieStore {
     /// `Ok(StoreAction::Inserted)`. If the `Cookie` is __expired__ *and* matches an existing
     /// `Cookie` in the store, the existing `Cookie` wil be `expired()` and
     /// `Ok(StoreAction::ExpiredExisting)` will be returned.
-    pub fn insert(&mut self, mut cookie: Cookie<'static>, request_url: &Url) -> InsertResult {
+    pub fn insert(&mut self, cookie: Cookie<'static>, request_url: &Url) -> InsertResult {
         if cookie.http_only().unwrap_or(false) && !is_http_scheme(request_url) {
             // If the cookie was received from a "non-HTTP" API and the
             // cookie's http-only-flag is set, abort these steps and ignore the
             // cookie entirely.
             return Err(CookieError::NonHttpScheme);
-        } else if let Some(ref psl) = self.public_suffix_list {
+        }
+        #[cfg(feature = "public_suffix")]
+        let mut cookie = cookie;
+        #[cfg(feature = "public_suffix")]
+        if let Some(ref psl) = self.public_suffix_list {
             // If the user agent is configured to reject "public suffixes"
             if cookie.domain.is_public_suffix(psl) {
                 // and the domain-attribute is a public suffix:
@@ -271,14 +276,15 @@ impl CookieStore {
                     //     Let the domain-attribute be the empty string.
                     // (NB: at this point, an empty domain-attribute should be represented
                     // as the HostOnly variant of CookieDomain)
-                    cookie.domain = CookieDomain::host_only(request_url)?;
+                    cookie.domain = crate::cookie_domain::CookieDomain::host_only(request_url)?;
                 } else {
                     //   Otherwise:
                     //     Ignore the cookie entirely and abort these steps.
                     return Err(CookieError::PublicSuffix);
                 }
             }
-        } else if !cookie.domain.matches(request_url) {
+        }
+        if !cookie.domain.matches(request_url) {
             // If the canonicalized request-host does not domain-match the
             // domain-attribute:
             //    Ignore the cookie entirely and abort these steps.
@@ -451,6 +457,7 @@ impl CookieStore {
         }
         Ok(Self {
             cookies,
+            #[cfg(feature = "public_suffix")]
             public_suffix_list: None,
         })
     }

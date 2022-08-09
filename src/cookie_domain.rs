@@ -2,6 +2,7 @@ use std;
 
 use cookie::Cookie as RawCookie;
 use idna;
+#[cfg(feature = "public_suffix")]
 use publicsuffix::{List, Psl, Suffix};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -95,6 +96,7 @@ impl CookieDomain {
 
     /// Tests if the domain-attribute is a public suffix as indicated by the provided
     /// `publicsuffix::List`.
+    #[cfg(feature = "public_suffix")]
     pub fn is_public_suffix(&self, psl: &List) -> bool {
         if let Some(domain) = self.as_cow().as_ref().map(|d| d.as_bytes()) {
             psl.suffix(domain)

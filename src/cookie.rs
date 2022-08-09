@@ -17,7 +17,7 @@ pub enum Error {
     /// Cookie had attribute HttpOnly but was received from a request-uri which was not an http
     /// scheme
     NonHttpScheme,
-    /// Cookie did not specify domain but was recevied from non-relative-scheme request-uri from
+    /// Cookie did not specify domain but was received from non-relative-scheme request-uri from
     /// which host could not be determined
     NonRelativeScheme,
     /// Cookie received from a request-uri that does not domain-match
@@ -26,6 +26,7 @@ pub enum Error {
     Expired,
     /// `cookie::Cookie` Parse error
     Parse,
+    #[cfg(feature = "public_suffix")]
     /// Cookie specified a public suffix domain-attribute that does not match the canonicalized
     /// request-uri host
     PublicSuffix,
@@ -49,6 +50,7 @@ impl fmt::Display for Error {
                 Error::DomainMismatch => "request-uri does not domain-match the cookie",
                 Error::Expired => "attempted to utilize an Expired Cookie",
                 Error::Parse => "unable to parse string as cookie::Cookie",
+                #[cfg(feature = "public_suffix")]
                 Error::PublicSuffix => "domain-attribute value is a public suffix",
                 Error::UnspecifiedDomain => "domain-attribute is not specified",
             }
@@ -196,7 +198,7 @@ impl<'a> Cookie<'a> {
             .and_then(|p| CookiePath::parse(p))
             .unwrap_or_else(|| CookiePath::default_path(request_url));
 
-        // per RFC6265, Max-Age takes precendence, then Expires, otherwise is Session
+        // per RFC6265, Max-Age takes precedence, then Expires, otherwise is Session
         // only
         let expires = if let Some(max_age) = raw_cookie.max_age() {
             CookieExpiration::from(max_age)
