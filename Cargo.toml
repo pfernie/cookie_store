@@ -16,15 +16,16 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = []
+default = ["public_suffix"]
 
 # uses `indexmap::IndexMap` in lieu of HashMap internally, so cookies are maintained in insertion/creation order
 preserve_order = ["indexmap"]
+public_suffix = ["publicsuffix"]
 
 [dependencies]
 idna = "0.2.3"
 log = "0.4.14"
-publicsuffix = "2.1.1"
+publicsuffix = { version = "2.1.1", optional = true }
 serde = { version = "1.0.136", features = [ "derive" ] }
 serde_json = "1.0.79"
 time = "0.3.7"
