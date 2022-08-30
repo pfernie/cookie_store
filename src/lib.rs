@@ -47,8 +47,9 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub(crate) mod rfc3339_fmt {
-    
-    pub(crate) const RFC3339_FORMAT: &[time::format_description::FormatItem] = time::macros::format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]Z");
+
+    pub(crate) const RFC3339_FORMAT: &[time::format_description::FormatItem] =
+        time::macros::format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]Z");
 
     pub(super) fn serialize<S>(t: &time::OffsetDateTime, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -74,11 +75,13 @@ pub(crate) mod rfc3339_fmt {
         use serde::{de::Error, Deserialize};
 
         let s = String::deserialize(t)?;
-        time::OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339).map_err(|e| {
-            D::Error::custom(format!(
-                "Could not parse string '{}' as RFC3339 UTC format: {}",
-                s, e
-            ))
-        })
+        time::OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339).map_err(
+            |e| {
+                D::Error::custom(format!(
+                    "Could not parse string '{}' as RFC3339 UTC format: {}",
+                    s, e
+                ))
+            },
+        )
     }
 }

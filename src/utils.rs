@@ -1,6 +1,6 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
-use url::{ParseError as UrlError, Host};
 use url::Url;
+use url::{Host, ParseError as UrlError};
 
 pub trait IntoUrl {
     fn into_url(self) -> Result<Url, UrlError>;
