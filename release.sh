@@ -15,16 +15,16 @@ if [ -n "$1" ]; then
   sed "s/^version = .* $msg$/version = \"${1#v}\" $msg/" -i Cargo.toml
   # update the changelog
   git cliff --date-order --sort newest --unreleased --tag "$1" --prepend CHANGELOG.md
-  git add -A
-  git diff --cached
+  git diff
   echo -e -n "\e[33mProceed? \e[0m"
   read -n 1 -s -p "[y/N] " proceed
   echo
   if [[ "${proceed}" != "y" ]]; then
-    echo -e "\e[31maborting, don't forget to unstage changes:\e[0m"
+    echo -e "\e[31maborting; leaving dirty state:\e[0m"
     git status -s
     exit
   fi
+  git add -A
   git commit -m "chore(release): prepare for $1"
   git show
   # generate a changelog for the tag message
@@ -35,9 +35,9 @@ if [ -n "$1" ]; then
       - {% if commit.breaking %}(breaking) {% endif %}{{ commit.message | upper_first }} ({{ commit.id | truncate(length=7, end=\"\") }})\
         {% endfor %}
         {% endfor %}"
-          changelog=$(git cliff --date-order --sort newest --unreleased --strip all)
-          git tag -a "$1" -m "Release $1" -m "$changelog"
-          git show -q "$1"
-        else
-          echo "warn: please provide a tag"
-      fi
+  changelog=$(git cliff --date-order --sort newest --unreleased --strip all)
+  git tag "$1" -m "Release $1" -m "$changelog"
+  git show -q "$1"
+else
+  echo "warn: please provide a tag"
+fi
