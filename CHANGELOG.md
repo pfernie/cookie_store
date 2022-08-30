@@ -1,3 +1,12 @@
+# Changelog
+
+## [0.17.0] - 2022-08-30
+
+### Miscellaneous Tasks
+
+- Prepare version item for `release.sh`
+- Prepare to start using `git-cliff`
+
 ## [0.16.1]
 * Export `cookie_domain::CookieDomain` as `pub`
 * Export `pub use cookie_expiration::CookieExpiration`
