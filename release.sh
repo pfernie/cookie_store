@@ -35,7 +35,7 @@ if [ -n "$1" ]; then
 		- {% if commit.breaking %}(breaking) {% endif %}{{ commit.message | upper_first }} ({{ commit.id | truncate(length=7, end=\"\") }})\
 	{% endfor %}
 	{% endfor %}"
-	changelog=$(git cliff --unreleased --strip all)
+	changelog=$(git cliff --date-order --sort newest --unreleased --strip all)
 	# create a signed tag
 	# https://keyserver.ubuntu.com/pks/lookup?search=0x4A92FA17B6619297&op=vindex
 	git tag -a "$1" -m "Release $1" -m "$changelog"
