@@ -21,6 +21,7 @@ default = ["public_suffix"]
 # uses `indexmap::IndexMap` in lieu of HashMap internally, so cookies are maintained in insertion/creation order
 preserve_order = ["indexmap"]
 public_suffix = ["publicsuffix"]
+wasm-bindgen = ["time/wasm-bindgen"]
 
 [dependencies]
 idna = "0.3"
