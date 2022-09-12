@@ -23,7 +23,7 @@ preserve_order = ["indexmap"]
 public_suffix = ["publicsuffix"]
 
 [dependencies]
-idna = "0.2.3"
+idna = "0.3"
 log = "0.4.17"
 publicsuffix = { version = "2.2.2", optional = true }
 serde = { version = "1.0.144", features = [ "derive" ] }
