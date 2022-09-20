@@ -80,7 +80,12 @@ impl CookieStore {
         url: &Url,
     ) {
         for cookie in cookies {
-            debug!("inserting Set-Cookie '{:?}'", cookie);
+            if cookie.secure() != Some(true) || cfg!(feature = "log_secure_cookie_values") {
+                debug!("inserting Set-Cookie '{:?}'", cookie);
+            } else {
+                debug!("inserting secure cookie '{}'", cookie.name());
+            }
+
             if let Err(e) = self.insert_raw(&cookie, url) {
                 debug!("unable to store Set-Cookie: {:?}", e);
             }

@@ -23,6 +23,9 @@ preserve_order = ["indexmap"]
 public_suffix = ["publicsuffix"]
 wasm-bindgen = ["time/wasm-bindgen"]
 
+# Enable logging the values of cookies marked 'secure', off by default as values may be sensitive
+log_secure_cookie_values = []
+
 [dependencies]
 idna = "0.3"
 log = "0.4.17"
