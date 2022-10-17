@@ -41,7 +41,7 @@ pub enum StoreAction {
 pub type StoreResult<T> = Result<T, crate::Error>;
 pub type InsertResult = Result<StoreAction, CookieError>;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 /// An implementation for storing and retrieving [`Cookie`]s per the path and domain matching
 /// rules specified in [RFC6265](https://datatracker.ietf.org/doc/html/rfc6265).
 pub struct CookieStore {
