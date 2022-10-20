@@ -7,7 +7,6 @@ rules specified in [RFC6265](https://datatracker.ietf.org/doc/html/rfc6265).
 ## Features
 
 * `preserve_order` - if enabled, iteration order of cookies will be maintained in insertion order. Pulls in an additional dependency on the [indexmap](https://crates.io/crates/indexmap) crate.
-* **REMOVED** `reqwest_impl` - the `CookieStoreMutex` and `CookieStoreRwLock` implementations previously provided under this feature are now provided in an independent crate, [reqwest_cookie_store](https://crates.io/crates/reqwest_cookie_store)
 
 ## Usage with [reqwest](https://crates.io/crates/reqwest)
 
