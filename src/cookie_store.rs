@@ -384,8 +384,12 @@ impl CookieStore {
         self.save(writer, ::serde_json::to_string)
     }
 
-    /// Serialize all cookies in the store with `cookie_to_string` and write them to `writer`
-    pub fn save_all<W, E, F>(&self, writer: &mut W, cookie_to_string: F) -> StoreResult<()>
+    /// Serialize all (including __expired__ and __non-persistent__) cookies in the store with `cookie_to_string` and write them to `writer`
+    pub fn save_incl_expired_and_nonpersistent<W, E, F>(
+        &self,
+        writer: &mut W,
+        cookie_to_string: F,
+    ) -> StoreResult<()>
     where
         W: Write,
         F: Fn(&Cookie<'static>) -> Result<String, E>,
@@ -397,9 +401,12 @@ impl CookieStore {
         Ok(())
     }
 
-    /// Serialize all cookies in the store to JSON format and write them to `writer`
-    pub fn save_all_json<W: Write>(&self, writer: &mut W) -> StoreResult<()> {
-        self.save_all(writer, ::serde_json::to_string)
+    /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to JSON format and write them to `writer`
+    pub fn save_incl_expired_and_nonpersistent_json<W: Write>(
+        &self,
+        writer: &mut W,
+    ) -> StoreResult<()> {
+        self.save_incl_expired_and_nonpersistent(writer, ::serde_json::to_string)
     }
 
     /// Load cookies from `reader`, deserializing with `cookie_from_str`, skipping any __expired__
