@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.18.0] - 2022-10-25
+
+### Documentation
+
+- Remove old `reqwest_impl` REMOVAL notice
+
+### Features
+
+- Make logging secure cookie values opt-in
+
+### Miscellaneous Tasks
+
+- Dependency bumps
+- Update CONTRIBUTORS
+- Update to idna 0.3
+- Do not use annotated tags in release.sh
+- Prepare version item for `release.sh`
+- Prepare to start using `git-cliff`
+
+### Styling
+
+- Cargo fmt
+- Fix release.sh comments/whitespace
+
+### Build
+
+- Expose feature `wasm-bindgen`
+
+### Cookie_store
+
+- Derive clone for CookieStore
+- Add API to save all cookies
+
+### Rename
+
+- New `save_all` methods to emphasize divergence from RFC behavior
+
 ## [0.17.0] - 2022-08-30
 
 ### Miscellaneous Tasks
