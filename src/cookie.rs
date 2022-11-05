@@ -208,27 +208,8 @@ impl<'a> Cookie<'a> {
             CookieExpiration::SessionEnd
         };
 
-        // These are all tracked via Cookie, clear from RawCookie
-        let mut builder =
-            RawCookieBuilder::new(raw_cookie.name().to_owned(), raw_cookie.value().to_owned());
-        if let Some(secure) = raw_cookie.secure() {
-            builder = builder.secure(secure);
-        }
-        if let Some(http_only) = raw_cookie.http_only() {
-            builder = builder.http_only(http_only);
-        }
-        if let Some(same_site) = raw_cookie.same_site() {
-            builder = builder.same_site(same_site);
-        }
-        if let Some(path) = raw_cookie.path() {
-            builder = builder.path(path.to_owned());
-        }
-        if let CookieDomain::Suffix(ref d) = domain {
-            builder = builder.domain(d.to_owned());
-        }
-
         Ok(Cookie {
-            raw_cookie: builder.finish(),
+            raw_cookie: raw_cookie.clone(),
             path,
             expires,
             domain,
@@ -823,7 +804,7 @@ mod serde_tests {
                 None,
             ),
             json!({
-                "raw_cookie": "cookie4=value4",
+                "raw_cookie": "cookie4=value4; Expires=Tue, 11 Aug 2015 16:41:42 GMT",
                 "path": ["/foo", false],
                 "domain": { "HostOnly": "example.com" },
                 "expires": { "AtUtc": at_utc.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap().to_string() },
@@ -841,10 +822,13 @@ mod serde_tests {
             CookieExpiration::SessionEnd => unreachable!(),
         };
 
+        let utc_formatted= utc_tm.format(&time::format_description::well_known::Rfc2822).unwrap().to_string().replace("+0000", "GMT");
+        let raw_cookie_value = format!("cookie5=value5; Expires={utc_formatted}");
+
         encode_decode(
             &expires,
             json!({
-                "raw_cookie": "cookie5=value5",
+                "raw_cookie": raw_cookie_value,
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
                 "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap().to_string() },
@@ -870,7 +854,7 @@ mod serde_tests {
         encode_decode(
             &max_age,
             json!({
-                "raw_cookie": "cookie6=value6",
+                "raw_cookie": "cookie6=value6; Max-Age=10; Expires=Tue, 11 Aug 2015 16:41:42 GMT",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
                 "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap().to_string() },
@@ -890,7 +874,7 @@ mod serde_tests {
         encode_decode(
             &max_age,
             json!({
-                "raw_cookie": "cookie7=value7",
+                "raw_cookie": "cookie7=value7; Max-Age=10",
                 "path":["/foo", false],
                 "domain": { "HostOnly": "example.com" },
                 "expires": { "AtUtc": utc_tm.format(crate::rfc3339_fmt::RFC3339_FORMAT).unwrap().to_string() },
