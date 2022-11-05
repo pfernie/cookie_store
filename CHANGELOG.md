@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.19.0] - 2022-11-05
+
+### Bug Fixes
+
+- Store clone of original raw cookie
+
+### Cookie_store
+
+- Fix missing raw cookie elements
+
 ## [0.18.0] - 2022-10-25
 
 ### Documentation
