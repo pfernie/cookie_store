@@ -220,6 +220,12 @@ impl<'a> Cookie<'a> {
         if let Some(same_site) = raw_cookie.same_site() {
             builder = builder.same_site(same_site);
         }
+        if let Some(path) = raw_cookie.path() {
+            builder = builder.path(path.to_owned());
+        }
+        if let CookieDomain::Suffix(ref d) = domain {
+            builder = builder.domain(d.to_owned());
+        }
 
         Ok(Cookie {
             raw_cookie: builder.finish(),
@@ -784,7 +790,7 @@ mod serde_tests {
                 None,
             ),
             json!({
-                "raw_cookie": "cookie2=value2",
+                "raw_cookie": "cookie2=value2; Domain=example.com",
                 "path": ["/foo", false],
                 "domain": { "Suffix": "example.com" },
                 "expires": "SessionEnd"
@@ -799,7 +805,7 @@ mod serde_tests {
                 None,
             ),
             json!({
-                "raw_cookie": "cookie3=value3",
+                "raw_cookie": "cookie3=value3; Path=/foo/bar",
                 "path": ["/foo/bar", true],
                 "domain": { "HostOnly": "foo.example.com" },
                 "expires": "SessionEnd",
