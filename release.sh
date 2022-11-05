@@ -10,6 +10,10 @@ fi
 
 # takes the tag as an argument (e.g. v0.1.0)
 if [ -n "$1" ]; then
+  if ! $(echo "${1}"|grep -q '^v[0-9]\+\.[0-9]\+\.[0-9]\+$'); then
+    echo -e "\e[31m${1} not a version of the expected format; please use v#.#.# format\e[0m"
+    exit
+  fi
   # update the version
   msg="# managed by release.sh"
   sed "s/^version = .* $msg$/version = \"${1#v}\" $msg/" -i Cargo.toml
