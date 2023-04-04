@@ -39,4 +39,4 @@ indexmap = { version = "1.9.1", optional = true }
 
 [dependencies.cookie]
 features = ["percent-encode"]
-version = "0.16.1"
+version = "0.17.0"
