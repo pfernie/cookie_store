@@ -4,7 +4,7 @@ use crate::cookie_path::CookiePath;
 
 use crate::utils::{is_http_scheme, is_secure};
 use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::fmt;
