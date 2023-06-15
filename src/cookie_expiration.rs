@@ -1,6 +1,6 @@
 use std;
 
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 use time::{self, OffsetDateTime};
 
 /// When a given `Cookie` expires
