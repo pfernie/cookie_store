@@ -1,3 +1,12 @@
+# Changelog
+
+## [0.16.2] - 2023-06-16
+
+### Ci
+
+- Backport cliff.toml & release.sh to v0.16.X branch
+- Allow serde and serde_derive to compile in parallel
+
 = v0.16.1 =
 * Export `cookie_domain::CookieDomain` as `pub`
 * Export `pub use cookie_expiration::CookieExpiration`
