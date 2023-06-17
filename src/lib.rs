@@ -13,6 +13,8 @@
 
 use idna;
 
+pub use ::cookie::{Cookie as RawCookie, ParseError as RawCookieParseError};
+
 mod cookie;
 pub use crate::cookie::Error as CookieError;
 pub use crate::cookie::{Cookie, CookieResult};
