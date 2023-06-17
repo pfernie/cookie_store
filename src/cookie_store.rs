@@ -491,6 +491,16 @@ impl CookieStore {
             public_suffix_list: None,
         })
     }
+
+    pub fn new(
+        #[cfg(feature = "public_suffix")] public_suffix_list: Option<publicsuffix::List>,
+    ) -> Self {
+        Self {
+            cookies: DomainMap::new(),
+            #[cfg(feature = "public_suffix")]
+            public_suffix_list,
+        }
+    }
 }
 
 impl Serialize for CookieStore {
