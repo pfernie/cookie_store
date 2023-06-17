@@ -822,7 +822,11 @@ mod serde_tests {
             CookieExpiration::SessionEnd => unreachable!(),
         };
 
-        let utc_formatted= utc_tm.format(&time::format_description::well_known::Rfc2822).unwrap().to_string().replace("+0000", "GMT");
+        let utc_formatted = utc_tm
+            .format(&time::format_description::well_known::Rfc2822)
+            .unwrap()
+            .to_string()
+            .replace("+0000", "GMT");
         let raw_cookie_value = format!("cookie5=value5; Expires={utc_formatted}");
 
         encode_decode(
