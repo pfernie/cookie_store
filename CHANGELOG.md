@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.20.0] - 2023-06-17
+
+### Features
+
+- Re-export dependency cookie
+- Add `CookieStore::new()`
+
+### Styling
+
+- Rust_fmt changes
+
 ## [0.19.1] - 2023-06-17
 
 ### Ci
