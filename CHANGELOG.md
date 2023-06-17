@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.19.1] - 2023-06-17
+
+### Ci
+
+- Allow specification of last tag to generate CHANGELOG from
+- Fix git-cliff args for latest release
+- Allow serde and serde_derive to compile in parallel
+- Check tag format in release.sh
+
 ## [0.19.0] - 2022-11-05
 
 ### Bug Fixes
