@@ -25,7 +25,7 @@ pub use crate::cookie_expiration::CookieExpiration;
 mod cookie_path;
 pub use crate::cookie_path::CookiePath;
 mod cookie_store;
-pub use crate::cookie_store::CookieStore;
+pub use crate::cookie_store::{CookieStore, StoreAction};
 mod utils;
 
 #[derive(Debug)]
