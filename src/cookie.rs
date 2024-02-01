@@ -254,7 +254,7 @@ impl<'a> From<Cookie<'a>> for RawCookie<'a> {
             builder = builder.domain(s);
         }
 
-        builder.finish()
+        builder.build()
     }
 }
 
