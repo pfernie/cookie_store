@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.21.0] - 2024-02-08
+
+### Miscellaneous Tasks
+
+- Update CONTRIBUTORS.md
+
+### Ci
+
+- Add missing v0.20.1 CHANGELOG entries
+- Rm `--topo-order` from `git-cliff` call
+
 ## [0.20.1] - 2024-02-08
 
 ### Bug Fixes
