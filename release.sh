@@ -22,7 +22,7 @@ if [ -n "$1" ]; then
 	msg="# managed by release.sh"
 	sed "s/^version = .* $msg$/version = \"${1#v}\" $msg/" -i Cargo.toml
 	# update the changelog
-	git cliff --topo-order --sort newest $since_flag --tag "$1" --prepend CHANGELOG.md
+	git cliff --sort newest $since_flag --tag "$1" --prepend CHANGELOG.md
 	git diff
 	echo -e -n "\e[33mProceed? \e[0m"
 	read -n 1 -s -p "[y/N] " proceed
@@ -43,7 +43,7 @@ if [ -n "$1" ]; then
       - {% if commit.breaking %}(breaking) {% endif %}{{ commit.message | upper_first }} ({{ commit.id | truncate(length=7, end=\"\") }})\
         {% endfor %}
         {% endfor %}"
-	changelog=$(git cliff --topo-order --sort newest $since_flag --strip all)
+	changelog=$(git cliff --sort newest $since_flag --strip all)
 	git tag "$1" -m "Release $1" -m "$changelog"
 	git show -q "$1"
 else
