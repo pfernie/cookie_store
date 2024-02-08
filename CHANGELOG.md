@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.20.1] - 2024-02-08
+
+### Bug Fixes
+
+- Pub use `cookie_store::StoreAction`
+- Need to maintain 0.20.x series for [patch] behavior to work
+
+### Miscellaneous Tasks
+
+- Update CONTRIBUTORS.md
+
 ## [0.20.0] - 2023-06-17
 
 ### Features
