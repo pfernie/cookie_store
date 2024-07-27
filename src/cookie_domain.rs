@@ -4,7 +4,7 @@ use cookie::Cookie as RawCookie;
 use idna;
 #[cfg(feature = "public_suffix")]
 use publicsuffix::{List, Psl, Suffix};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use url::{Host, Url};
 
