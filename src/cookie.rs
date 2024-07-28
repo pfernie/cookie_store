@@ -4,7 +4,7 @@ use crate::cookie_path::CookiePath;
 
 use crate::utils::{is_http_scheme, is_secure};
 use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::fmt;
@@ -255,6 +255,73 @@ impl<'a> From<Cookie<'a>> for RawCookie<'a> {
         }
 
         builder.build()
+    }
+}
+
+#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
+pub struct CookieStoreSerialized<'a> {
+    cookies: Vec<Cookie<'a>>,
+}
+
+mod cookie_store_serialized {
+    use std::io::BufRead;
+
+    use crate::{cookie_store::StoreResult, CookieStore};
+
+    use super::CookieStoreSerialized;
+
+    fn load_json_expired<R: BufRead>(mut reader: R, include_expired: bool) -> StoreResult<CookieStore> {
+        let mut cookie_store = String::new();
+        reader.read_to_string(&mut cookie_store)?;
+        let cookie_store: CookieStoreSerialized = ::serde_json::from_str(&cookie_store)?;
+        CookieStore::from_cookies(cookie_store.cookies.into_iter().map(|cookie| Ok(cookie)), include_expired)
+    }
+
+    pub fn load_json<R: BufRead>(mut reader: R) -> StoreResult<CookieStore> {
+        load_json_expired(reader, false)
+    }
+
+    pub fn load_json_all<R: BufRead>(mut reader: R) -> StoreResult<CookieStore> {
+        load_json_expired(reader, true)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::{load_json, load_json_all};
+
+        #[test]
+        fn check_count() {
+            let cookies = r#"{
+            "cookies":
+                [
+                    {
+                        "raw_cookie":"A=21Og9ri;SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2000 00:38:37 GMT",
+                        "path":["/",true],
+                        "domain":{"HostOnly":"test.com"},
+                        "expires":{"AtUtc":"2000-08-03T00:38:37Z"}
+                    },
+                    {
+                        "raw_cookie":"A=21Og9ri;SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2100 00:38:37 GMT",
+                        "path":["/",true],
+                        "domain":{"HostOnly":"test.com"},
+                        "expires":{"AtUtc":"2100-08-03T00:38:37Z"}
+                    }
+                ]
+        }"#;
+            let cookie_store_1 = load_json(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
+            let mut count_1 = 0;
+            let cookie_store_2 = load_json_all(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
+            let mut count_2 = 0;
+            for _cookie in cookie_store_1.iter_any() {
+                count_1 += 1;
+            }
+            for _cookie in cookie_store_2.iter_any() {
+                count_2 += 1;
+            }
+            assert_eq!(count_1, 1);
+            assert_eq!(count_2, 2);
+        }
+
     }
 }
 
