@@ -406,20 +406,20 @@ pub mod cookie_store_serialized {
 
     #[cfg(test)]
     mod tests {
-        use super::{load_json, load_json_all};
+        use super::{load_json, load_json_all, load_ron, load_ron_all};
 
         #[test]
-        fn check_count() {
+        fn check_count_json() {
             let cookies = r#"{
                 "cookies": [
                     {
-                        "raw_cookie":"A=21Og9ri; SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2000 00:38:37 GMT",
+                        "raw_cookie":"1=one; SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2000 00:38:37 GMT",
                         "path":["/",true],
                         "domain":{"HostOnly":"test.com"},
                         "expires":{"AtUtc":"2000-08-03T00:38:37Z"}
                     },
                     {
-                        "raw_cookie":"AB=21O; SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2100 00:38:37 GMT",
+                        "raw_cookie":"2=two; SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2100 00:38:37 GMT",
                         "path":["/",true],
                         "domain":{"HostOnly":"test.com"},
                         "expires":{"AtUtc":"2100-08-03T00:38:37Z"}
@@ -429,6 +429,38 @@ pub mod cookie_store_serialized {
             let cookie_store_1 = load_json(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
             let mut count_1 = 0;
             let cookie_store_2 = load_json_all(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
+            let mut count_2 = 0;
+            for _cookie in cookie_store_1.iter_any() {
+                count_1 += 1;
+            }
+            for _cookie in cookie_store_2.iter_any() {
+                count_2 += 1;
+            }
+            assert_eq!(count_1, 1);
+            assert_eq!(count_2, 2);
+        }
+
+        #[test]
+        fn check_count_ron() {
+            let cookies = r#"(
+                cookies: [
+                    Cookie (
+                        raw_cookie: "1=one; SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2000 00:38:37 GMT",
+                        path: CookiePath("/", true),
+                        domain: HostOnly("test.com"),
+                        expires: AtUtc("2000-08-03T00:38:37Z"),
+                    ),
+                    Cookie (
+                        raw_cookie: "2=two; SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2100 00:38:37 GMT",
+                        path: CookiePath("/", true),
+                        domain: HostOnly("test.com"),
+                        expires: AtUtc("2100-08-03T00:38:37Z"),
+                    ),
+                ]
+            )"#;
+            let cookie_store_1 = load_ron(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
+            let mut count_1 = 0;
+            let cookie_store_2 = load_ron_all(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
             let mut count_2 = 0;
             for _cookie in cookie_store_1.iter_any() {
                 count_1 += 1;
