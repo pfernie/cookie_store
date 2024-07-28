@@ -264,7 +264,7 @@ pub struct CookieStoreSerialized<'a> {
 }
 
 pub mod cookie_store_serialized {
-    use std::io::BufRead;
+    use std::io::{BufRead, Write};
 
     use crate::{cookie_store::StoreResult, CookieStore};
 
@@ -291,6 +291,65 @@ pub mod cookie_store_serialized {
     /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
     pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         load_json_expired(reader, true)
+    }
+
+    /// Serialize any __unexpired__ and __persistent__ cookies in the store with `cookie_to_string`
+    /// and write them to `writer`
+    pub fn save<W, E, F>(
+        cookie_store: &CookieStore,
+        writer: &mut W,
+        cookies_to_string: F,
+    ) -> StoreResult<()>
+    where
+        W: Write,
+        F: Fn(CookieStoreSerialized<'static>) -> Result<String, E>,
+        crate::Error: From<E>,
+    {
+        let mut cookies = Vec::new();
+        for cookie in cookie_store.iter_unexpired() {
+            if cookie.is_persistent() {
+                cookies.push(cookie.clone());
+            }
+        }
+        let cookie_store = CookieStoreSerialized { cookies };
+        let cookies = cookies_to_string(cookie_store);
+        writeln!(writer, "{}", cookies?)?;
+        Ok(())
+    }
+
+    /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
+    /// write them to `writer`
+    pub fn save_json<W: Write>(cookie_store: &CookieStore, writer: &mut W) -> StoreResult<()> {
+        cookie_store.save(writer, ::serde_json::to_string_pretty)
+    }
+
+    /// Serialize all (including __expired__ and __non-persistent__) cookies in the store with `cookie_to_string` and write them to `writer`
+    pub fn save_incl_expired_and_nonpersistent<W, E, F>(
+        cookie_store: &CookieStore,
+        writer: &mut W,
+        cookies_to_string: F,
+    ) -> StoreResult<()>
+    where
+        W: Write,
+        F: Fn(CookieStoreSerialized<'static>) -> Result<String, E>,
+        crate::Error: From<E>,
+    {
+        let mut cookies = Vec::new();
+        for cookie in cookie_store.iter_any() {
+            cookies.push(cookie.clone());
+        }
+        let cookie_store = CookieStoreSerialized { cookies };
+        let cookies = cookies_to_string(cookie_store);
+        writeln!(writer, "{}", cookies?)?;
+        Ok(())
+    }
+
+    /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to JSON format and write them to `writer`
+    pub fn save_incl_expired_and_nonpersistent_json<W: Write>(
+        cookie_store: &CookieStore,
+        writer: &mut W,
+    ) -> StoreResult<()> {
+        cookie_store.save_incl_expired_and_nonpersistent(writer, ::serde_json::to_string_pretty)
     }
 
     #[cfg(test)]
