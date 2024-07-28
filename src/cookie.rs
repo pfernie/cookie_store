@@ -4,7 +4,7 @@ use crate::cookie_path::CookiePath;
 
 use crate::utils::{is_http_scheme, is_secure};
 use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::fmt;
@@ -292,8 +292,7 @@ mod cookie_store_serialized {
         #[test]
         fn check_count() {
             let cookies = r#"{
-            "cookies":
-                [
+                "cookies": [
                     {
                         "raw_cookie":"A=21Og9ri;SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2000 00:38:37 GMT",
                         "path":["/",true],
@@ -301,13 +300,13 @@ mod cookie_store_serialized {
                         "expires":{"AtUtc":"2000-08-03T00:38:37Z"}
                     },
                     {
-                        "raw_cookie":"A=21Og9ri;SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2100 00:38:37 GMT",
+                        "raw_cookie":"AB=21O;SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2100 00:38:37 GMT",
                         "path":["/",true],
                         "domain":{"HostOnly":"test.com"},
                         "expires":{"AtUtc":"2100-08-03T00:38:37Z"}
                     }
                 ]
-        }"#;
+            }"#;
             let cookie_store_1 = load_json(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
             let mut count_1 = 0;
             let cookie_store_2 = load_json_all(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
