@@ -294,13 +294,13 @@ mod cookie_store_serialized {
             let cookies = r#"{
                 "cookies": [
                     {
-                        "raw_cookie":"A=21Og9ri;SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2000 00:38:37 GMT",
+                        "raw_cookie":"A=21Og9ri; SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2000 00:38:37 GMT",
                         "path":["/",true],
                         "domain":{"HostOnly":"test.com"},
                         "expires":{"AtUtc":"2000-08-03T00:38:37Z"}
                     },
                     {
-                        "raw_cookie":"AB=21O;SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2100 00:38:37 GMT",
+                        "raw_cookie":"AB=21O; SameSite=None; Secure; Path=/; Expires=Sat, 03 Aug 2100 00:38:37 GMT",
                         "path":["/",true],
                         "domain":{"HostOnly":"test.com"},
                         "expires":{"AtUtc":"2100-08-03T00:38:37Z"}
