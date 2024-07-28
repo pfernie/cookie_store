@@ -321,6 +321,16 @@ pub mod cookie_store_serialized {
         load_all(reader, |cookies| serde_json::from_str(cookies))
     }
 
+    /// Load RON-formatted cookies from `reader`, skipping any __expired__ cookies
+    pub fn load_ron<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
+        load(reader, |cookies| ron::from_str(cookies))
+    }
+
+    /// Load RON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
+    pub fn load_ron_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
+        load_all(reader, |cookies| ron::from_str(cookies))
+    }
+
     /// Serialize any __unexpired__ and __persistent__ cookies in the store with `cookie_to_string`
     /// and write them to `writer`
     pub fn save<W, E, F>(
@@ -330,7 +340,7 @@ pub mod cookie_store_serialized {
     ) -> StoreResult<()>
     where
         W: Write,
-        F: Fn(CookieStoreSerialized<'static>) -> Result<String, E>,
+        F: Fn(&CookieStoreSerialized<'static>) -> Result<String, E>,
         crate::Error: From<E>,
     {
         let mut cookies = Vec::new();
@@ -340,7 +350,7 @@ pub mod cookie_store_serialized {
             }
         }
         let cookie_store = CookieStoreSerialized { cookies };
-        let cookies = cookies_to_string(cookie_store);
+        let cookies = cookies_to_string(&cookie_store);
         writeln!(writer, "{}", cookies?)?;
         Ok(())
     }
@@ -348,7 +358,13 @@ pub mod cookie_store_serialized {
     /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
     /// write them to `writer`
     pub fn save_json<W: Write>(cookie_store: &CookieStore, writer: &mut W) -> StoreResult<()> {
-        cookie_store.save(writer, ::serde_json::to_string_pretty)
+        save(cookie_store, writer, ::serde_json::to_string_pretty)
+    }
+
+    /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
+    /// write them to `writer`
+    pub fn save_ron<W: Write>(cookie_store: &CookieStore, writer: &mut W) -> StoreResult<()> {
+        save(cookie_store, writer, ::serde_json::to_string_pretty)
     }
 
     /// Serialize all (including __expired__ and __non-persistent__) cookies in the store with `cookie_to_string` and write them to `writer`
@@ -359,7 +375,7 @@ pub mod cookie_store_serialized {
     ) -> StoreResult<()>
     where
         W: Write,
-        F: Fn(CookieStoreSerialized<'static>) -> Result<String, E>,
+        F: Fn(&CookieStoreSerialized<'static>) -> Result<String, E>,
         crate::Error: From<E>,
     {
         let mut cookies = Vec::new();
@@ -367,7 +383,7 @@ pub mod cookie_store_serialized {
             cookies.push(cookie.clone());
         }
         let cookie_store = CookieStoreSerialized { cookies };
-        let cookies = cookies_to_string(cookie_store);
+        let cookies = cookies_to_string(&cookie_store);
         writeln!(writer, "{}", cookies?)?;
         Ok(())
     }
@@ -377,7 +393,15 @@ pub mod cookie_store_serialized {
         cookie_store: &CookieStore,
         writer: &mut W,
     ) -> StoreResult<()> {
-        cookie_store.save_incl_expired_and_nonpersistent(writer, ::serde_json::to_string_pretty)
+        save_incl_expired_and_nonpersistent(cookie_store, writer, ::serde_json::to_string_pretty)
+    }
+
+    /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to RON format and write them to `writer`
+    pub fn save_incl_expired_and_nonpersistent_ron<W: Write>(
+        cookie_store: &CookieStore,
+        writer: &mut W,
+    ) -> StoreResult<()> {
+        save_incl_expired_and_nonpersistent(cookie_store, writer, ::serde_json::to_string_pretty)
     }
 
     #[cfg(test)]
