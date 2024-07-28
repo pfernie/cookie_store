@@ -270,13 +270,41 @@ pub mod cookie_store_serialized {
 
     use super::CookieStoreSerialized;
 
-    fn load_json_expired<R: BufRead>(
+    /// Load cookies from `reader`, deserializing with `cookie_from_str`, skipping any __expired__
+    /// cookies
+    pub fn load<R, E, F>(reader: R, cookie_from_str: F) -> StoreResult<CookieStore>
+    where
+        R: BufRead,
+        F: Fn(&str) -> Result<CookieStoreSerialized<'static>, E>,
+        crate::Error: From<E>,
+    {
+        load_from(reader, cookie_from_str, false)
+    }
+
+    /// Load cookies from `reader`, deserializing with `cookie_from_str`, loading both __unexpired__
+    /// and __expired__ cookies
+    pub fn load_all<R, E, F>(reader: R, cookie_from_str: F) -> StoreResult<CookieStore>
+    where
+        R: BufRead,
+        F: Fn(&str) -> Result<CookieStoreSerialized<'static>, E>,
+        crate::Error: From<E>,
+    {
+        load_from(reader, cookie_from_str, true)
+    }
+
+    fn load_from<R, E, F>(
         mut reader: R,
+        cookie_from_str: F,
         include_expired: bool,
-    ) -> StoreResult<CookieStore> {
+    ) -> StoreResult<CookieStore>
+    where
+        R: BufRead,
+        F: Fn(&str) -> Result<CookieStoreSerialized<'static>, E>,
+        crate::Error: From<E>,
+    {
         let mut cookie_store = String::new();
         reader.read_to_string(&mut cookie_store)?;
-        let cookie_store: CookieStoreSerialized = ::serde_json::from_str(&cookie_store)?;
+        let cookie_store: CookieStoreSerialized = cookie_from_str(&cookie_store)?;
         CookieStore::from_cookies(
             cookie_store.cookies.into_iter().map(|cookie| Ok(cookie)),
             include_expired,
@@ -285,12 +313,12 @@ pub mod cookie_store_serialized {
 
     /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
     pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
-        load_json_expired(reader, false)
+        load(reader, |cookie| serde_json::from_str(cookie))
     }
 
     /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
     pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
-        load_json_expired(reader, true)
+        load_all(reader, |cookie| serde_json::from_str(cookie))
     }
 
     /// Serialize any __unexpired__ and __persistent__ cookies in the store with `cookie_to_string`
