@@ -18,6 +18,7 @@ pub use ::cookie::{Cookie as RawCookie, ParseError as RawCookieParseError};
 mod cookie;
 pub use crate::cookie::Error as CookieError;
 pub use crate::cookie::{Cookie, CookieResult};
+pub use crate::cookie::cookie_store_serialized;
 mod cookie_domain;
 pub use crate::cookie_domain::CookieDomain;
 mod cookie_expiration;

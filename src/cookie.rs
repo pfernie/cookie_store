@@ -263,7 +263,7 @@ pub struct CookieStoreSerialized<'a> {
     cookies: Vec<Cookie<'a>>,
 }
 
-mod cookie_store_serialized {
+pub mod cookie_store_serialized {
     use std::io::BufRead;
 
     use crate::{cookie_store::StoreResult, CookieStore};
