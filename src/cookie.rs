@@ -277,11 +277,11 @@ mod cookie_store_serialized {
         CookieStore::from_cookies(cookie_store.cookies.into_iter().map(|cookie| Ok(cookie)), include_expired)
     }
 
-    pub fn load_json<R: BufRead>(mut reader: R) -> StoreResult<CookieStore> {
+    pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         load_json_expired(reader, false)
     }
 
-    pub fn load_json_all<R: BufRead>(mut reader: R) -> StoreResult<CookieStore> {
+    pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         load_json_expired(reader, true)
     }
 
