@@ -283,10 +283,12 @@ mod cookie_store_serialized {
         )
     }
 
+    /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
     pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         load_json_expired(reader, false)
     }
 
+    /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
     pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         load_json_expired(reader, true)
     }
