@@ -270,11 +270,17 @@ mod cookie_store_serialized {
 
     use super::CookieStoreSerialized;
 
-    fn load_json_expired<R: BufRead>(mut reader: R, include_expired: bool) -> StoreResult<CookieStore> {
+    fn load_json_expired<R: BufRead>(
+        mut reader: R,
+        include_expired: bool,
+    ) -> StoreResult<CookieStore> {
         let mut cookie_store = String::new();
         reader.read_to_string(&mut cookie_store)?;
         let cookie_store: CookieStoreSerialized = ::serde_json::from_str(&cookie_store)?;
-        CookieStore::from_cookies(cookie_store.cookies.into_iter().map(|cookie| Ok(cookie)), include_expired)
+        CookieStore::from_cookies(
+            cookie_store.cookies.into_iter().map(|cookie| Ok(cookie)),
+            include_expired,
+        )
     }
 
     pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
@@ -320,7 +326,6 @@ mod cookie_store_serialized {
             assert_eq!(count_1, 1);
             assert_eq!(count_2, 2);
         }
-
     }
 }
 
