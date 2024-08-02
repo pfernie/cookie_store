@@ -412,8 +412,6 @@ pub mod cookie_store_serialized {
     mod tests {
         use std::io::BufWriter;
 
-        use ron::to_string;
-
         use crate::cookie_store_serialized::{
             save_incl_expired_and_nonpersistent_json, save_incl_expired_and_nonpersistent_ron,
             save_json, save_ron,
