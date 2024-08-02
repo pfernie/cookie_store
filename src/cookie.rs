@@ -412,6 +412,8 @@ pub mod cookie_store_serialized {
     mod tests {
         use std::io::BufWriter;
 
+        use ron::to_string;
+
         use crate::cookie_store_serialized::{
             save_incl_expired_and_nonpersistent_json, save_incl_expired_and_nonpersistent_ron,
             save_json, save_ron,
@@ -419,23 +421,9 @@ pub mod cookie_store_serialized {
 
         use super::{load_json, load_json_all, load_ron, load_ron_all};
 
-        #[test]
-        fn check_count_json() {
-            let cookies = r#"{
+        fn cookie_json() -> String {
+r#"{
   "cookies": [
-    {
-      "raw_cookie": "1=one; SameSite=None; Secure; Path=/; Expires=Thu, 03 Aug 2000 00:38:37 GMT",
-      "path": [
-        "/",
-        true
-      ],
-      "domain": {
-        "HostOnly": "test.com"
-      },
-      "expires": {
-        "AtUtc": "2000-08-03T00:38:37Z"
-      }
-    },
     {
       "raw_cookie": "2=two; SameSite=None; Secure; Path=/; Expires=Tue, 03 Aug 2100 00:38:37 GMT",
       "path": [
@@ -451,30 +439,99 @@ pub mod cookie_store_serialized {
     }
   ]
 }
-"#;
-            let cookie_store_1 = load_json(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
-            let mut count_1 = 0;
-            let cookie_store_2 = load_json_all(Into::<&[u8]>::into(cookies.as_bytes())).unwrap();
-            let mut count_2 = 0;
-            for _cookie in cookie_store_1.iter_any() {
-                count_1 += 1;
-            }
-            for _cookie in cookie_store_2.iter_any() {
-                count_2 += 1;
-            }
-            assert_eq!(count_1, 1);
-            assert_eq!(count_2, 2);
+"#.to_string()
+        }
 
-            // The order in which the records are stored is randomly changed!
-            let mut writer = BufWriter::new(Vec::new());
-            save_json(&cookie_store_2, &mut writer).unwrap();
-            let _string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-            // assert_eq!(cookies/2, string);
+        fn cookie_json_expired() -> String {
+r#"{
+  "cookies": [
+    {
+      "raw_cookie": "1=one; SameSite=None; Secure; Path=/; Expires=Thu, 03 Aug 2000 00:38:37 GMT",
+      "path": [
+        "/",
+        true
+      ],
+      "domain": {
+        "HostOnly": "test.com"
+      },
+      "expires": {
+        "AtUtc": "2000-08-03T00:38:37Z"
+      }
+    }
+  ]
+}
+"#.to_string()
+        }
+
+        #[test]
+        fn check_count_json() {
+            let cookie = cookie_json();
+
+            let cookie_store = load_json(Into::<&[u8]>::into(cookie.as_bytes())).unwrap();
+            assert_eq!(cookie_store.iter_any().map(|_| 1).sum::<i32>(), 1);
+            assert_eq!(cookie_store.iter_unexpired().map(|_| 1).sum::<i32>(), 1);
+
+            let cookie_store_all = load_json_all(Into::<&[u8]>::into(cookie.as_bytes())).unwrap();
+            assert_eq!(cookie_store_all.iter_any().map(|_| 1).sum::<i32>(), 1);
+            assert_eq!(cookie_store_all.iter_unexpired().map(|_| 1).sum::<i32>(), 1);
+
 
             let mut writer = BufWriter::new(Vec::new());
-            save_incl_expired_and_nonpersistent_json(&cookie_store_2, &mut writer).unwrap();
-            let _string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-            // assert_eq!(cookies, string);
+            save_json(&cookie_store, &mut writer).unwrap();
+            let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
+            assert_eq!(cookie, string);
+
+            let mut writer = BufWriter::new(Vec::new());
+            save_incl_expired_and_nonpersistent_json(&cookie_store, &mut writer).unwrap();
+            let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
+            assert_eq!(cookie, string);
+
+
+            let mut writer = BufWriter::new(Vec::new());
+            save_json(&cookie_store_all, &mut writer).unwrap();
+            let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
+            assert_eq!(cookie, string);
+
+            let mut writer = BufWriter::new(Vec::new());
+            save_incl_expired_and_nonpersistent_json(&cookie_store_all, &mut writer).unwrap();
+            let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
+            assert_eq!(cookie, string);
+
+        }
+
+        #[test]
+        fn check_count_json_expired() {
+            let cookie = cookie_json_expired();
+
+            let cookie_store = load_json(Into::<&[u8]>::into(cookie.as_bytes())).unwrap();
+            assert_eq!(cookie_store.iter_any().map(|_| 1).sum::<i32>(), 0);
+            assert_eq!(cookie_store.iter_unexpired().map(|_| 1).sum::<i32>(), 0);
+
+            let cookie_store_all = load_json_all(Into::<&[u8]>::into(cookie.as_bytes())).unwrap();
+            assert_eq!(cookie_store_all.iter_any().map(|_| 1).sum::<i32>(), 1);
+            assert_eq!(cookie_store_all.iter_unexpired().map(|_| 1).sum::<i32>(), 0);
+
+
+            let mut writer = BufWriter::new(Vec::new());
+            save_json(&cookie_store, &mut writer).unwrap();
+            let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
+            assert_eq!("{\n  \"cookies\": []\n}\n", string);
+
+            let mut writer = BufWriter::new(Vec::new());
+            save_incl_expired_and_nonpersistent_json(&cookie_store, &mut writer).unwrap();
+            let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
+            assert_eq!("{\n  \"cookies\": []\n}\n", string);
+
+
+            let mut writer = BufWriter::new(Vec::new());
+            save_json(&cookie_store_all, &mut writer).unwrap();
+            let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
+            assert_eq!("{\n  \"cookies\": []\n}\n", string);
+
+            let mut writer = BufWriter::new(Vec::new());
+            save_incl_expired_and_nonpersistent_json(&cookie_store_all, &mut writer).unwrap();
+            let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
+            assert_eq!(cookie, string);
         }
 
         #[test]
