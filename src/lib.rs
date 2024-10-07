@@ -16,7 +16,6 @@ use idna;
 pub use ::cookie::{Cookie as RawCookie, ParseError as RawCookieParseError};
 
 mod cookie;
-pub use crate::cookie::cookie_store_serialized;
 pub use crate::cookie::Error as CookieError;
 pub use crate::cookie::{Cookie, CookieResult};
 mod cookie_domain;
@@ -27,6 +26,7 @@ mod cookie_path;
 pub use crate::cookie_path::CookiePath;
 mod cookie_store;
 pub use crate::cookie_store::{CookieStore, StoreAction};
+pub mod serialization;
 mod utils;
 
 #[derive(Debug)]
