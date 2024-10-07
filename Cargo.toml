@@ -19,8 +19,8 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = ["public_suffix"]
 
 # uses `indexmap::IndexMap` in lieu of HashMap internally, so cookies are maintained in insertion/creation order
-preserve_order = ["indexmap"]
-public_suffix = ["publicsuffix"]
+preserve_order = ["dep:indexmap"]
+public_suffix = ["dep:publicsuffix"]
 wasm-bindgen = ["time/wasm-bindgen"]
 
 # Enable logging the values of cookies marked 'secure', off by default as values may be sensitive
