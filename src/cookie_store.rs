@@ -553,23 +553,40 @@ mod tests {
     use crate::cookie::Cookie;
     use crate::CookieError;
     use ::cookie::Cookie as RawCookie;
-    use std::str::from_utf8;
     use time::OffsetDateTime;
 
     use crate::utils::test as test_utils;
 
-    macro_rules! has_str {
+    #[cfg(feature = "serde_json")]
+    macro_rules! dump_json {
         ($e: expr, $i: ident) => {{
-            let val = from_utf8(&$i[..]).unwrap();
-            assert!(val.contains($e), "exp: {}\nval: {}", $e, val);
+            use serde_json;
+            println!("");
+            println!(
+                "==== {}: {} ====",
+                $e,
+                time::OffsetDateTime::now_utc()
+                    .format(crate::rfc3339_fmt::RFC3339_FORMAT)
+                    .unwrap()
+            );
+            for c in $i.iter_any() {
+                println!(
+                    "{} {}",
+                    if c.is_expired() {
+                        "XXXXX"
+                    } else if c.is_persistent() {
+                        "PPPPP"
+                    } else {
+                        "     "
+                    },
+                    serde_json::to_string(c).unwrap()
+                );
+                println!("----------------");
+            }
+            println!("================");
         }};
     }
-    macro_rules! not_has_str {
-        ($e: expr, $i: ident) => {{
-            let val = from_utf8(&$i[..]).unwrap();
-            assert!(!val.contains($e), "exp: {}\nval: {}", $e, val);
-        }};
-    }
+
     macro_rules! inserted {
         ($e: expr) => {
             assert_eq!(Ok(StoreAction::Inserted), $e)
@@ -803,207 +820,6 @@ mod tests {
     }
 
     #[test]
-    fn save() {
-        let mut output = vec![];
-        let mut store = CookieStore::default();
-        store.save_json(&mut output).unwrap();
-        assert_eq!("", from_utf8(&output[..]).unwrap());
-        // non-persistent cookie, should not be saved
-        inserted!(add_cookie(
-            &mut store,
-            "cookie0=value0",
-            "http://example.com/foo/bar",
-            None,
-            None,
-        ));
-        store.save_json(&mut output).unwrap();
-        assert_eq!("", from_utf8(&output[..]).unwrap());
-
-        // persistent cookie, Max-Age
-        inserted!(add_cookie(
-            &mut store,
-            "cookie1=value1",
-            "http://example.com/foo/bar",
-            None,
-            Some(10),
-        ));
-        store.save_json(&mut output).unwrap();
-        not_has_str!("cookie0=value0", output);
-        has_str!("cookie1=value1", output);
-        output.clear();
-
-        // persistent cookie, Expires
-        inserted!(add_cookie(
-            &mut store,
-            "cookie2=value2",
-            "http://example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        store.save_json(&mut output).unwrap();
-        not_has_str!("cookie0=value0", output);
-        has_str!("cookie1=value1", output);
-        has_str!("cookie2=value2", output);
-        output.clear();
-
-        inserted!(add_cookie(
-            &mut store,
-            "cookie3=value3; Domain=example.com",
-            "http://foo.example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie4=value4; Path=/foo/",
-            "http://foo.example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie5=value5",
-            "http://127.0.0.1/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie6=value6",
-            "http://[::1]/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie7=value7; Secure",
-            "https://[::1]/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie8=value8; HttpOnly",
-            "http://[::1]/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        store.save_json(&mut output).unwrap();
-        not_has_str!("cookie0=value0", output);
-        has_str!("cookie1=value1", output);
-        has_str!("cookie2=value2", output);
-        has_str!("cookie3=value3", output);
-        has_str!("cookie4=value4", output);
-        has_str!("cookie5=value5", output);
-        has_str!("cookie6=value6", output);
-        has_str!("cookie7=value7; Secure", output);
-        has_str!("cookie8=value8; HttpOnly", output);
-        output.clear();
-    }
-
-    #[test]
-    fn serialize() {
-        let mut output = vec![];
-        let mut store = CookieStore::default();
-        serde_json::to_writer(&mut output, &store).unwrap();
-        assert_eq!("[]", from_utf8(&output[..]).unwrap());
-        output.clear();
-
-        // non-persistent cookie, should not be saved
-        inserted!(add_cookie(
-            &mut store,
-            "cookie0=value0",
-            "http://example.com/foo/bar",
-            None,
-            None,
-        ));
-        serde_json::to_writer(&mut output, &store).unwrap();
-        assert_eq!("[]", from_utf8(&output[..]).unwrap());
-        output.clear();
-
-        // persistent cookie, Max-Age
-        inserted!(add_cookie(
-            &mut store,
-            "cookie1=value1",
-            "http://example.com/foo/bar",
-            None,
-            Some(10),
-        ));
-        serde_json::to_writer(&mut output, &store).unwrap();
-        not_has_str!("cookie0=value0", output);
-        has_str!("cookie1=value1", output);
-        output.clear();
-
-        // persistent cookie, Expires
-        inserted!(add_cookie(
-            &mut store,
-            "cookie2=value2",
-            "http://example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        serde_json::to_writer(&mut output, &store).unwrap();
-        not_has_str!("cookie0=value0", output);
-        has_str!("cookie1=value1", output);
-        has_str!("cookie2=value2", output);
-        output.clear();
-
-        inserted!(add_cookie(
-            &mut store,
-            "cookie3=value3; Domain=example.com",
-            "http://foo.example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie4=value4; Path=/foo/",
-            "http://foo.example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie5=value5",
-            "http://127.0.0.1/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie6=value6",
-            "http://[::1]/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie7=value7; Secure",
-            "https://[::1]/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie8=value8; HttpOnly",
-            "http://[::1]/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        serde_json::to_writer(&mut output, &store).unwrap();
-        not_has_str!("cookie0=value0", output);
-        has_str!("cookie1=value1", output);
-        has_str!("cookie2=value2", output);
-        has_str!("cookie3=value3", output);
-        has_str!("cookie4=value4", output);
-        has_str!("cookie5=value5", output);
-        has_str!("cookie6=value6", output);
-        has_str!("cookie7=value7; Secure", output);
-        has_str!("cookie8=value8; HttpOnly", output);
-        output.clear();
-    }
-
-    #[test]
     fn domains() {
         let mut store = CookieStore::default();
         //        The user agent will reject cookies unless the Domain attribute
@@ -1129,216 +945,7 @@ mod tests {
     }
 
     #[test]
-    fn load() {
-        let mut store = CookieStore::default();
-        // non-persistent cookie, should not be saved
-        inserted!(add_cookie(
-            &mut store,
-            "cookie0=value0",
-            "http://example.com/foo/bar",
-            None,
-            None,
-        ));
-        // persistent cookie, Max-Age
-        inserted!(add_cookie(
-            &mut store,
-            "cookie1=value1",
-            "http://example.com/foo/bar",
-            None,
-            Some(10),
-        ));
-        // persistent cookie, Expires
-        inserted!(add_cookie(
-            &mut store,
-            "cookie2=value2",
-            "http://example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie3=value3; Domain=example.com",
-            "http://foo.example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie4=value4; Path=/foo/",
-            "http://foo.example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie5=value5",
-            "http://127.0.0.1/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie6=value6",
-            "http://[::1]/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie7=value7; Secure",
-            "http://example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie8=value8; HttpOnly",
-            "http://example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        let mut output = vec![];
-        store.save_json(&mut output).unwrap();
-        not_has_str!("cookie0=value0", output);
-        has_str!("cookie1=value1", output);
-        has_str!("cookie2=value2", output);
-        has_str!("cookie3=value3", output);
-        has_str!("cookie4=value4", output);
-        has_str!("cookie5=value5", output);
-        has_str!("cookie6=value6", output);
-        has_str!("cookie7=value7; Secure", output);
-        has_str!("cookie8=value8; HttpOnly", output);
-        let store = CookieStore::load_json(&output[..]).unwrap();
-        assert!(store.get("example.com", "/foo", "cookie0").is_none());
-        assert!(store.get("example.com", "/foo", "cookie1").unwrap().value() == "value1");
-        assert!(store.get("example.com", "/foo", "cookie2").unwrap().value() == "value2");
-        assert!(store.get("example.com", "/foo", "cookie3").unwrap().value() == "value3");
-        assert!(
-            store
-                .get("foo.example.com", "/foo/", "cookie4")
-                .unwrap()
-                .value()
-                == "value4"
-        );
-        assert!(store.get("127.0.0.1", "/foo", "cookie5").unwrap().value() == "value5");
-        assert!(store.get("[::1]", "/foo", "cookie6").unwrap().value() == "value6");
-        assert!(store.get("example.com", "/foo", "cookie7").unwrap().value() == "value7");
-        assert!(store.get("example.com", "/foo", "cookie8").unwrap().value() == "value8");
-
-        output.clear();
-        let store = make_match_store();
-        store.save_json(&mut output).unwrap();
-        let store = CookieStore::load_json(&output[..]).unwrap();
-        check_matches!(&store);
-    }
-
-    #[test]
-    fn deserialize() {
-        let mut store = CookieStore::default();
-        // non-persistent cookie, should not be saved
-        inserted!(add_cookie(
-            &mut store,
-            "cookie0=value0",
-            "http://example.com/foo/bar",
-            None,
-            None,
-        ));
-        // persistent cookie, Max-Age
-        inserted!(add_cookie(
-            &mut store,
-            "cookie1=value1",
-            "http://example.com/foo/bar",
-            None,
-            Some(10),
-        ));
-        // persistent cookie, Expires
-        inserted!(add_cookie(
-            &mut store,
-            "cookie2=value2",
-            "http://example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie3=value3; Domain=example.com",
-            "http://foo.example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie4=value4; Path=/foo/",
-            "http://foo.example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie5=value5",
-            "http://127.0.0.1/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie6=value6",
-            "http://[::1]/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie7=value7; Secure",
-            "http://example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        inserted!(add_cookie(
-            &mut store,
-            "cookie8=value8; HttpOnly",
-            "http://example.com/foo/bar",
-            Some(test_utils::in_days(1)),
-            None,
-        ));
-        let mut output = vec![];
-        serde_json::to_writer(&mut output, &store).unwrap();
-        not_has_str!("cookie0=value0", output);
-        has_str!("cookie1=value1", output);
-        has_str!("cookie2=value2", output);
-        has_str!("cookie3=value3", output);
-        has_str!("cookie4=value4", output);
-        has_str!("cookie5=value5", output);
-        has_str!("cookie6=value6", output);
-        has_str!("cookie7=value7; Secure", output);
-        has_str!("cookie8=value8; HttpOnly", output);
-        let store: CookieStore = serde_json::from_reader(&output[..]).unwrap();
-        assert!(store.get("example.com", "/foo", "cookie0").is_none());
-        assert!(store.get("example.com", "/foo", "cookie1").unwrap().value() == "value1");
-        assert!(store.get("example.com", "/foo", "cookie2").unwrap().value() == "value2");
-        assert!(store.get("example.com", "/foo", "cookie3").unwrap().value() == "value3");
-        assert!(
-            store
-                .get("foo.example.com", "/foo/", "cookie4")
-                .unwrap()
-                .value()
-                == "value4"
-        );
-        assert!(store.get("127.0.0.1", "/foo", "cookie5").unwrap().value() == "value5");
-        assert!(store.get("[::1]", "/foo", "cookie6").unwrap().value() == "value6");
-        assert!(store.get("example.com", "/foo", "cookie7").unwrap().value() == "value7");
-        assert!(store.get("example.com", "/foo", "cookie8").unwrap().value() == "value8");
-
-        output.clear();
-        let store = make_match_store();
-        serde_json::to_writer(&mut output, &store).unwrap();
-        let store: CookieStore = serde_json::from_reader(&output[..]).unwrap();
-        check_matches!(&store);
-    }
-
-    #[test]
     fn clear() {
-        let mut output = vec![];
         let mut store = CookieStore::default();
         inserted!(add_cookie(
             &mut store,
@@ -1347,12 +954,9 @@ mod tests {
             Some(test_utils::in_days(1)),
             None,
         ));
-        store.save_json(&mut output).unwrap();
-        has_str!("cookie1=value1", output);
-        output.clear();
+        assert!(store.iter_any().any(|c| c.name_value() == ("cookie1", "value1")), "did not find expected cookie1=value1 cookie in store");
         store.clear();
-        store.save_json(&mut output).unwrap();
-        assert_eq!("", from_utf8(&output[..]).unwrap());
+        assert!(store.iter_any().count() == 0, "found unexpected cookies in cleared store");
     }
 
     #[test]
@@ -1418,117 +1022,6 @@ mod tests {
     fn matches() {
         let store = make_match_store();
         check_matches!(&store);
-    }
-
-    #[test]
-    fn expiry() {
-        let mut store = make_match_store();
-        let request_url = test_utils::url("http://foo.example.com");
-        let expired_cookie = Cookie::parse("cookie1=value1; Max-Age=-1", &request_url).unwrap();
-        expired_err!(store.insert(expired_cookie, &request_url));
-        check_matches!(&store);
-        match store.get_mut("example.com", "/", "cookie6") {
-            Some(cookie) => cookie.expire(),
-            None => unreachable!(),
-        }
-        values_are!(store, "http://unknowndomain.org/foo/bar", vec![]);
-        values_are!(store, "http://example.org/foo/bar", vec!["8"]);
-        values_are!(store, "http://example.org/bus/bar", vec![]);
-        values_are!(store, "http://bar.example.org/foo/bar", vec!["9"]);
-        values_are!(store, "http://bar.example.org/bus/bar", vec![]);
-        values_are!(store, "https://example.com/sec/foo", vec!["4", "3", "2"]);
-        values_are!(store, "http://example.com/sec/foo", vec!["3"]);
-        values_are!(store, "ftp://example.com/sec/foo", vec![]);
-        values_are!(store, "http://bar.example.com/foo/bar/bus", vec!["7"]);
-        values_are!(store, "http://example.com/foo/bar/bus", vec!["1", "5"]);
-        match store.get_any("example.com", "/", "cookie6") {
-            Some(cookie) => assert!(cookie.is_expired()),
-            None => unreachable!(),
-        }
-        // inserting an expired cookie that matches an existing cookie should expire
-        // the existing
-        let request_url = test_utils::url("http://example.com/foo/");
-        let expired_cookie = Cookie::parse("cookie5=value5; Max-Age=-1", &request_url).unwrap();
-        expired_existing!(store.insert(expired_cookie, &request_url));
-        values_are!(store, "http://unknowndomain.org/foo/bar", vec![]);
-        values_are!(store, "http://example.org/foo/bar", vec!["8"]);
-        values_are!(store, "http://example.org/bus/bar", vec![]);
-        values_are!(store, "http://bar.example.org/foo/bar", vec!["9"]);
-        values_are!(store, "http://bar.example.org/bus/bar", vec![]);
-        values_are!(store, "https://example.com/sec/foo", vec!["4", "3", "2"]);
-        values_are!(store, "http://example.com/sec/foo", vec!["3"]);
-        values_are!(store, "ftp://example.com/sec/foo", vec![]);
-        values_are!(store, "http://bar.example.com/foo/bar/bus", vec!["7"]);
-        values_are!(store, "http://example.com/foo/bar/bus", vec!["1"]);
-        match store.get_any("example.com", "/foo", "cookie5") {
-            Some(cookie) => assert!(cookie.is_expired()),
-            None => unreachable!(),
-        }
-        // save and loading the store should drop any expired cookies
-        let mut output = vec![];
-        store.save_json(&mut output).unwrap();
-        store = CookieStore::load_json(&output[..]).unwrap();
-        values_are!(store, "http://unknowndomain.org/foo/bar", vec![]);
-        values_are!(store, "http://example.org/foo/bar", vec!["8"]);
-        values_are!(store, "http://example.org/bus/bar", vec![]);
-        values_are!(store, "http://bar.example.org/foo/bar", vec!["9"]);
-        values_are!(store, "http://bar.example.org/bus/bar", vec![]);
-        values_are!(store, "https://example.com/sec/foo", vec!["4", "3", "2"]);
-        values_are!(store, "http://example.com/sec/foo", vec!["3"]);
-        values_are!(store, "ftp://example.com/sec/foo", vec![]);
-        values_are!(store, "http://bar.example.com/foo/bar/bus", vec!["7"]);
-        values_are!(store, "http://example.com/foo/bar/bus", vec!["1"]);
-        assert!(store.get_any("example.com", "/", "cookie6").is_none());
-        assert!(store.get_any("example.com", "/foo", "cookie5").is_none());
-    }
-
-    #[test]
-    fn non_persistent() {
-        let mut store = make_match_store();
-        check_matches!(&store);
-        let request_url = test_utils::url("http://example.com/tmp/");
-        let non_persistent = Cookie::parse("cookie10=value10", &request_url).unwrap();
-        inserted!(store.insert(non_persistent, &request_url));
-        match store.get("example.com", "/tmp", "cookie10") {
-            None => unreachable!(),
-            Some(cookie) => assert_eq!("value10", cookie.value()),
-        }
-        // save and loading the store should drop any non-persistent cookies
-        let mut output = vec![];
-        store.save_json(&mut output).unwrap();
-        store = CookieStore::load_json(&output[..]).unwrap();
-        check_matches!(&store);
-        assert!(store.get("example.com", "/tmp", "cookie10").is_none());
-        assert!(store.get_any("example.com", "/tmp", "cookie10").is_none());
-    }
-
-    macro_rules! dump {
-        ($e: expr, $i: ident) => {{
-            use serde_json;
-            println!("");
-            println!(
-                "==== {}: {} ====",
-                $e,
-                time::OffsetDateTime::now_utc()
-                    .format(crate::rfc3339_fmt::RFC3339_FORMAT)
-                    .unwrap()
-            );
-            for c in $i.iter_any() {
-                println!(
-                    "{} {}",
-                    if c.is_expired() {
-                        "XXXXX"
-                    } else if c.is_persistent() {
-                        "PPPPP"
-                    } else {
-                        "     "
-                    },
-                    serde_json::to_string(c).unwrap()
-                );
-                println!("----------------");
-            }
-            println!("================");
-        }};
     }
 
     fn matches_are(store: &CookieStore, url: &str, exp: Vec<&str>) {
@@ -1615,7 +1108,8 @@ mod tests {
             None,
             None,
         ));
-        dump!("domain_collisions", store);
+        #[cfg(feature = "serde_json")]
+        dump_json!("domain_collisions", store);
         matches_are(
             &store,
             "http://foo.bus.example.com/",
@@ -1664,7 +1158,8 @@ mod tests {
             None,
             None,
         ));
-        dump!("path_collisions", store);
+        #[cfg(feature = "serde_json")]
+        dump_json!("path_collisions", store);
         matches_are(
             &store,
             "http://bus.example.com/foo/bar/",
@@ -1696,4 +1191,519 @@ mod tests {
         matches_are(&store, "http://bus.example.com/", vec![]);
         matches_are(&store, "http://bus.example.com", vec![]);
     }
+
+    #[cfg(feature = "serde_json")]
+    mod serde_json_tests {
+        use super::{CookieStore, StoreAction, add_cookie, make_match_store};
+        use crate::cookie::Cookie;
+        use crate::CookieError;
+
+        use crate::utils::test as test_utils;
+
+        macro_rules! has_str {
+            ($e: expr, $i: ident) => {{
+                let val = std::str::from_utf8(&$i[..]).unwrap();
+                assert!(val.contains($e), "exp: {}\nval: {}", $e, val);
+            }};
+        }
+        macro_rules! not_has_str {
+            ($e: expr, $i: ident) => {{
+                let val = std::str::from_utf8(&$i[..]).unwrap();
+                assert!(!val.contains($e), "exp: {}\nval: {}", $e, val);
+            }};
+        }
+
+        #[test]
+        fn save_json() {
+            let mut output = vec![];
+            let mut store = CookieStore::default();
+            store.save_json(&mut output).unwrap();
+            assert_eq!("", std::str::from_utf8(&output[..]).unwrap());
+            // non-persistent cookie, should not be saved
+            inserted!(add_cookie(
+                &mut store,
+                "cookie0=value0",
+                "http://example.com/foo/bar",
+                None,
+                None,
+            ));
+            store.save_json(&mut output).unwrap();
+            assert_eq!("", std::str::from_utf8(&output[..]).unwrap());
+
+            // persistent cookie, Max-Age
+            inserted!(add_cookie(
+                &mut store,
+                "cookie1=value1",
+                "http://example.com/foo/bar",
+                None,
+                Some(10),
+            ));
+            store.save_json(&mut output).unwrap();
+            not_has_str!("cookie0=value0", output);
+            has_str!("cookie1=value1", output);
+            output.clear();
+
+            // persistent cookie, Expires
+            inserted!(add_cookie(
+                &mut store,
+                "cookie2=value2",
+                "http://example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            store.save_json(&mut output).unwrap();
+            not_has_str!("cookie0=value0", output);
+            has_str!("cookie1=value1", output);
+            has_str!("cookie2=value2", output);
+            output.clear();
+
+            inserted!(add_cookie(
+                &mut store,
+                "cookie3=value3; Domain=example.com",
+                "http://foo.example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie4=value4; Path=/foo/",
+                "http://foo.example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie5=value5",
+                "http://127.0.0.1/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie6=value6",
+                "http://[::1]/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie7=value7; Secure",
+                "https://[::1]/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie8=value8; HttpOnly",
+                "http://[::1]/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            store.save_json(&mut output).unwrap();
+            not_has_str!("cookie0=value0", output);
+            has_str!("cookie1=value1", output);
+            has_str!("cookie2=value2", output);
+            has_str!("cookie3=value3", output);
+            has_str!("cookie4=value4", output);
+            has_str!("cookie5=value5", output);
+            has_str!("cookie6=value6", output);
+            has_str!("cookie7=value7; Secure", output);
+            has_str!("cookie8=value8; HttpOnly", output);
+            output.clear();
+        }
+
+        #[test]
+        fn serialize_json() {
+            let mut output = vec![];
+            let mut store = CookieStore::default();
+            serde_json::to_writer(&mut output, &store).unwrap();
+            assert_eq!("[]", std::str::from_utf8(&output[..]).unwrap());
+            output.clear();
+
+            // non-persistent cookie, should not be saved
+            inserted!(add_cookie(
+                &mut store,
+                "cookie0=value0",
+                "http://example.com/foo/bar",
+                None,
+                None,
+            ));
+            serde_json::to_writer(&mut output, &store).unwrap();
+            assert_eq!("[]", std::str::from_utf8(&output[..]).unwrap());
+            output.clear();
+
+            // persistent cookie, Max-Age
+            inserted!(add_cookie(
+                &mut store,
+                "cookie1=value1",
+                "http://example.com/foo/bar",
+                None,
+                Some(10),
+            ));
+            serde_json::to_writer(&mut output, &store).unwrap();
+            not_has_str!("cookie0=value0", output);
+            has_str!("cookie1=value1", output);
+            output.clear();
+
+            // persistent cookie, Expires
+            inserted!(add_cookie(
+                &mut store,
+                "cookie2=value2",
+                "http://example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            serde_json::to_writer(&mut output, &store).unwrap();
+            not_has_str!("cookie0=value0", output);
+            has_str!("cookie1=value1", output);
+            has_str!("cookie2=value2", output);
+            output.clear();
+
+            inserted!(add_cookie(
+                &mut store,
+                "cookie3=value3; Domain=example.com",
+                "http://foo.example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie4=value4; Path=/foo/",
+                "http://foo.example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie5=value5",
+                "http://127.0.0.1/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie6=value6",
+                "http://[::1]/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie7=value7; Secure",
+                "https://[::1]/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie8=value8; HttpOnly",
+                "http://[::1]/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            serde_json::to_writer(&mut output, &store).unwrap();
+            not_has_str!("cookie0=value0", output);
+            has_str!("cookie1=value1", output);
+            has_str!("cookie2=value2", output);
+            has_str!("cookie3=value3", output);
+            has_str!("cookie4=value4", output);
+            has_str!("cookie5=value5", output);
+            has_str!("cookie6=value6", output);
+            has_str!("cookie7=value7; Secure", output);
+            has_str!("cookie8=value8; HttpOnly", output);
+            output.clear();
+        }
+
+        #[test]
+        fn load_json() {
+            let mut store = CookieStore::default();
+            // non-persistent cookie, should not be saved
+            inserted!(add_cookie(
+                &mut store,
+                "cookie0=value0",
+                "http://example.com/foo/bar",
+                None,
+                None,
+            ));
+            // persistent cookie, Max-Age
+            inserted!(add_cookie(
+                &mut store,
+                "cookie1=value1",
+                "http://example.com/foo/bar",
+                None,
+                Some(10),
+            ));
+            // persistent cookie, Expires
+            inserted!(add_cookie(
+                &mut store,
+                "cookie2=value2",
+                "http://example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie3=value3; Domain=example.com",
+                "http://foo.example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie4=value4; Path=/foo/",
+                "http://foo.example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie5=value5",
+                "http://127.0.0.1/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie6=value6",
+                "http://[::1]/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie7=value7; Secure",
+                "http://example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie8=value8; HttpOnly",
+                "http://example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            let mut output = vec![];
+            store.save_json(&mut output).unwrap();
+            not_has_str!("cookie0=value0", output);
+            has_str!("cookie1=value1", output);
+            has_str!("cookie2=value2", output);
+            has_str!("cookie3=value3", output);
+            has_str!("cookie4=value4", output);
+            has_str!("cookie5=value5", output);
+            has_str!("cookie6=value6", output);
+            has_str!("cookie7=value7; Secure", output);
+            has_str!("cookie8=value8; HttpOnly", output);
+            let store = CookieStore::load_json(&output[..]).unwrap();
+            assert!(store.get("example.com", "/foo", "cookie0").is_none());
+            assert!(store.get("example.com", "/foo", "cookie1").unwrap().value() == "value1");
+            assert!(store.get("example.com", "/foo", "cookie2").unwrap().value() == "value2");
+            assert!(store.get("example.com", "/foo", "cookie3").unwrap().value() == "value3");
+            assert!(
+                store
+                    .get("foo.example.com", "/foo/", "cookie4")
+                    .unwrap()
+                    .value()
+                    == "value4"
+            );
+            assert!(store.get("127.0.0.1", "/foo", "cookie5").unwrap().value() == "value5");
+            assert!(store.get("[::1]", "/foo", "cookie6").unwrap().value() == "value6");
+            assert!(store.get("example.com", "/foo", "cookie7").unwrap().value() == "value7");
+            assert!(store.get("example.com", "/foo", "cookie8").unwrap().value() == "value8");
+
+            output.clear();
+            let store = make_match_store();
+            store.save_json(&mut output).unwrap();
+            let store = CookieStore::load_json(&output[..]).unwrap();
+            check_matches!(&store);
+        }
+
+        #[test]
+        fn deserialize_json() {
+            let mut store = CookieStore::default();
+            // non-persistent cookie, should not be saved
+            inserted!(add_cookie(
+                &mut store,
+                "cookie0=value0",
+                "http://example.com/foo/bar",
+                None,
+                None,
+            ));
+            // persistent cookie, Max-Age
+            inserted!(add_cookie(
+                &mut store,
+                "cookie1=value1",
+                "http://example.com/foo/bar",
+                None,
+                Some(10),
+            ));
+            // persistent cookie, Expires
+            inserted!(add_cookie(
+                &mut store,
+                "cookie2=value2",
+                "http://example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie3=value3; Domain=example.com",
+                "http://foo.example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie4=value4; Path=/foo/",
+                "http://foo.example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie5=value5",
+                "http://127.0.0.1/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie6=value6",
+                "http://[::1]/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie7=value7; Secure",
+                "http://example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            inserted!(add_cookie(
+                &mut store,
+                "cookie8=value8; HttpOnly",
+                "http://example.com/foo/bar",
+                Some(test_utils::in_days(1)),
+                None,
+            ));
+            let mut output = vec![];
+            serde_json::to_writer(&mut output, &store).unwrap();
+            not_has_str!("cookie0=value0", output);
+            has_str!("cookie1=value1", output);
+            has_str!("cookie2=value2", output);
+            has_str!("cookie3=value3", output);
+            has_str!("cookie4=value4", output);
+            has_str!("cookie5=value5", output);
+            has_str!("cookie6=value6", output);
+            has_str!("cookie7=value7; Secure", output);
+            has_str!("cookie8=value8; HttpOnly", output);
+            let store: CookieStore = serde_json::from_reader(&output[..]).unwrap();
+            assert!(store.get("example.com", "/foo", "cookie0").is_none());
+            assert!(store.get("example.com", "/foo", "cookie1").unwrap().value() == "value1");
+            assert!(store.get("example.com", "/foo", "cookie2").unwrap().value() == "value2");
+            assert!(store.get("example.com", "/foo", "cookie3").unwrap().value() == "value3");
+            assert!(
+                store
+                    .get("foo.example.com", "/foo/", "cookie4")
+                    .unwrap()
+                    .value()
+                    == "value4"
+            );
+            assert!(store.get("127.0.0.1", "/foo", "cookie5").unwrap().value() == "value5");
+            assert!(store.get("[::1]", "/foo", "cookie6").unwrap().value() == "value6");
+            assert!(store.get("example.com", "/foo", "cookie7").unwrap().value() == "value7");
+            assert!(store.get("example.com", "/foo", "cookie8").unwrap().value() == "value8");
+
+            output.clear();
+            let store = make_match_store();
+            serde_json::to_writer(&mut output, &store).unwrap();
+            let store: CookieStore = serde_json::from_reader(&output[..]).unwrap();
+            check_matches!(&store);
+        }
+
+        #[test]
+        fn expiry_json() {
+            let mut store = make_match_store();
+            let request_url = test_utils::url("http://foo.example.com");
+            let expired_cookie = Cookie::parse("cookie1=value1; Max-Age=-1", &request_url).unwrap();
+            expired_err!(store.insert(expired_cookie, &request_url));
+            check_matches!(&store);
+            match store.get_mut("example.com", "/", "cookie6") {
+                Some(cookie) => cookie.expire(),
+                None => unreachable!(),
+            }
+            values_are!(store, "http://unknowndomain.org/foo/bar", vec![]);
+            values_are!(store, "http://example.org/foo/bar", vec!["8"]);
+            values_are!(store, "http://example.org/bus/bar", vec![]);
+            values_are!(store, "http://bar.example.org/foo/bar", vec!["9"]);
+            values_are!(store, "http://bar.example.org/bus/bar", vec![]);
+            values_are!(store, "https://example.com/sec/foo", vec!["4", "3", "2"]);
+            values_are!(store, "http://example.com/sec/foo", vec!["3"]);
+            values_are!(store, "ftp://example.com/sec/foo", vec![]);
+            values_are!(store, "http://bar.example.com/foo/bar/bus", vec!["7"]);
+            values_are!(store, "http://example.com/foo/bar/bus", vec!["1", "5"]);
+            match store.get_any("example.com", "/", "cookie6") {
+                Some(cookie) => assert!(cookie.is_expired()),
+                None => unreachable!(),
+            }
+            // inserting an expired cookie that matches an existing cookie should expire
+            // the existing
+            let request_url = test_utils::url("http://example.com/foo/");
+            let expired_cookie = Cookie::parse("cookie5=value5; Max-Age=-1", &request_url).unwrap();
+            expired_existing!(store.insert(expired_cookie, &request_url));
+            values_are!(store, "http://unknowndomain.org/foo/bar", vec![]);
+            values_are!(store, "http://example.org/foo/bar", vec!["8"]);
+            values_are!(store, "http://example.org/bus/bar", vec![]);
+            values_are!(store, "http://bar.example.org/foo/bar", vec!["9"]);
+            values_are!(store, "http://bar.example.org/bus/bar", vec![]);
+            values_are!(store, "https://example.com/sec/foo", vec!["4", "3", "2"]);
+            values_are!(store, "http://example.com/sec/foo", vec!["3"]);
+            values_are!(store, "ftp://example.com/sec/foo", vec![]);
+            values_are!(store, "http://bar.example.com/foo/bar/bus", vec!["7"]);
+            values_are!(store, "http://example.com/foo/bar/bus", vec!["1"]);
+            match store.get_any("example.com", "/foo", "cookie5") {
+                Some(cookie) => assert!(cookie.is_expired()),
+                None => unreachable!(),
+            }
+            // save and loading the store should drop any expired cookies
+            let mut output = vec![];
+            store.save_json(&mut output).unwrap();
+            store = CookieStore::load_json(&output[..]).unwrap();
+            values_are!(store, "http://unknowndomain.org/foo/bar", vec![]);
+            values_are!(store, "http://example.org/foo/bar", vec!["8"]);
+            values_are!(store, "http://example.org/bus/bar", vec![]);
+            values_are!(store, "http://bar.example.org/foo/bar", vec!["9"]);
+            values_are!(store, "http://bar.example.org/bus/bar", vec![]);
+            values_are!(store, "https://example.com/sec/foo", vec!["4", "3", "2"]);
+            values_are!(store, "http://example.com/sec/foo", vec!["3"]);
+            values_are!(store, "ftp://example.com/sec/foo", vec![]);
+            values_are!(store, "http://bar.example.com/foo/bar/bus", vec!["7"]);
+            values_are!(store, "http://example.com/foo/bar/bus", vec!["1"]);
+            assert!(store.get_any("example.com", "/", "cookie6").is_none());
+            assert!(store.get_any("example.com", "/foo", "cookie5").is_none());
+        }
+
+        #[test]
+        fn non_persistent_json() {
+            let mut store = make_match_store();
+            check_matches!(&store);
+            let request_url = test_utils::url("http://example.com/tmp/");
+            let non_persistent = Cookie::parse("cookie10=value10", &request_url).unwrap();
+            inserted!(store.insert(non_persistent, &request_url));
+            match store.get("example.com", "/tmp", "cookie10") {
+                None => unreachable!(),
+                Some(cookie) => assert_eq!("value10", cookie.value()),
+            }
+            // save and loading the store should drop any non-persistent cookies
+            let mut output = vec![];
+            store.save_json(&mut output).unwrap();
+            store = CookieStore::load_json(&output[..]).unwrap();
+            check_matches!(&store);
+            assert!(store.get("example.com", "/tmp", "cookie10").is_none());
+            assert!(store.get_any("example.com", "/tmp", "cookie10").is_none());
+        }
+
+    }
 }
+

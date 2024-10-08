@@ -726,8 +726,8 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "serde"))]
-mod serde_tests {
+#[cfg(all(test, feature = "serde_json"))]
+mod serde_json_tests {
     use crate::cookie::Cookie;
     use crate::cookie_expiration::CookieExpiration;
     use crate::utils::test as test_utils;
