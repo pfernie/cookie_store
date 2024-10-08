@@ -7,17 +7,12 @@ pub mod json;
 #[cfg(feature = "serde_ron")]
 pub mod ron;
 
-#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
-pub struct CookieStoreSerialized<'a> {
-    cookies: Vec<Cookie<'a>>,
-}
-
 /// Load cookies from `reader`, deserializing with `cookie_from_str`, skipping any __expired__
 /// cookies
 pub fn load<R, E, F>(reader: R, cookies_from_str: F) -> StoreResult<CookieStore>
     where
     R: BufRead,
-    F: Fn(&str) -> Result<CookieStoreSerialized<'static>, E>,
+    F: Fn(&str) -> Result<Vec<Cookie<'static>>, E>,
     crate::Error: From<E>,
 {
     load_from(reader, cookies_from_str, false)
@@ -28,7 +23,7 @@ pub fn load<R, E, F>(reader: R, cookies_from_str: F) -> StoreResult<CookieStore>
 pub fn load_all<R, E, F>(reader: R, cookies_from_str: F) -> StoreResult<CookieStore>
     where
     R: BufRead,
-    F: Fn(&str) -> Result<CookieStoreSerialized<'static>, E>,
+    F: Fn(&str) -> Result<Vec<Cookie<'static>>, E>,
     crate::Error: From<E>,
 {
     load_from(reader, cookies_from_str, true)
@@ -41,14 +36,14 @@ fn load_from<R, E, F>(
 ) -> StoreResult<CookieStore>
     where
     R: BufRead,
-    F: Fn(&str) -> Result<CookieStoreSerialized<'static>, E>,
+    F: Fn(&str) -> Result<Vec<Cookie<'static>>, E>,
     crate::Error: From<E>,
 {
     let mut cookie_store = String::new();
     reader.read_to_string(&mut cookie_store)?;
-    let cookie_store: CookieStoreSerialized = cookies_from_str(&cookie_store)?;
+    let cookies = cookies_from_str(&cookie_store)?;
     CookieStore::from_cookies(
-        cookie_store.cookies.into_iter().map(|cookies| Ok(cookies)),
+        cookies.into_iter().map(|cookies| Ok(cookies)),
         include_expired,
     )
 }
@@ -62,7 +57,7 @@ pub fn save<W, E, F>(
 ) -> StoreResult<()>
     where
     W: Write,
-    F: Fn(&CookieStoreSerialized<'static>) -> Result<String, E>,
+    F: Fn(&Vec<Cookie<'static>>) -> Result<String, E>,
     crate::Error: From<E>,
 {
     let mut cookies = Vec::new();
@@ -71,8 +66,7 @@ pub fn save<W, E, F>(
             cookies.push(cookie.clone());
         }
     }
-    let cookie_store = CookieStoreSerialized { cookies };
-    let cookies = cookies_to_string(&cookie_store);
+    let cookies = cookies_to_string(&cookies);
     writeln!(writer, "{}", cookies?)?;
     Ok(())
 }
@@ -85,15 +79,14 @@ pub fn save_incl_expired_and_nonpersistent<W, E, F>(
 ) -> StoreResult<()>
     where
     W: Write,
-    F: Fn(&CookieStoreSerialized<'static>) -> Result<String, E>,
+    F: Fn(&Vec<Cookie<'static>>) -> Result<String, E>,
     crate::Error: From<E>,
 {
     let mut cookies = Vec::new();
     for cookie in cookie_store.iter_any() {
         cookies.push(cookie.clone());
     }
-    let cookie_store = CookieStoreSerialized { cookies };
-    let cookies = cookies_to_string(&cookie_store);
+    let cookies = cookies_to_string(&cookies);
     writeln!(writer, "{}", cookies?)?;
     Ok(())
 }

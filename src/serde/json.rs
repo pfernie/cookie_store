@@ -35,45 +35,41 @@ mod tests {
     use super::{ load, load_all };
 
     fn cookie() -> String {
-        r#"{
-  "cookies": [
-    {
-      "raw_cookie": "2=two; SameSite=None; Secure; Path=/; Expires=Tue, 03 Aug 2100 00:38:37 GMT",
-      "path": [
-        "/",
-        true
-      ],
-      "domain": {
-        "HostOnly": "test.com"
-      },
-      "expires": {
-        "AtUtc": "2100-08-03T00:38:37Z"
-      }
+        r#"[
+  {
+    "raw_cookie": "2=two; SameSite=None; Secure; Path=/; Expires=Tue, 03 Aug 2100 00:38:37 GMT",
+    "path": [
+      "/",
+      true
+    ],
+    "domain": {
+      "HostOnly": "test.com"
+    },
+    "expires": {
+      "AtUtc": "2100-08-03T00:38:37Z"
     }
-  ]
-}
+  }
+]
 "#
             .to_string()
     }
 
     fn cookie_expired() -> String {
-        r#"{
-  "cookies": [
-    {
-      "raw_cookie": "1=one; SameSite=None; Secure; Path=/; Expires=Thu, 03 Aug 2000 00:38:37 GMT",
-      "path": [
-        "/",
-        true
-      ],
-      "domain": {
-        "HostOnly": "test.com"
-      },
-      "expires": {
-        "AtUtc": "2000-08-03T00:38:37Z"
-      }
+        r#"[
+  {
+    "raw_cookie": "1=one; SameSite=None; Secure; Path=/; Expires=Thu, 03 Aug 2000 00:38:37 GMT",
+    "path": [
+      "/",
+      true
+    ],
+    "domain": {
+      "HostOnly": "test.com"
+    },
+    "expires": {
+      "AtUtc": "2000-08-03T00:38:37Z"
     }
-  ]
-}
+  }
+]
 "#
             .to_string()
     }
@@ -126,17 +122,17 @@ mod tests {
         let mut writer = BufWriter::new(Vec::new());
         save(&cookie_store, &mut writer).unwrap();
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-        assert_eq!("{\n  \"cookies\": []\n}\n", string);
+        assert_eq!("[]\n", string);
 
         let mut writer = BufWriter::new(Vec::new());
         save_incl_expired_and_nonpersistent(&cookie_store, &mut writer).unwrap();
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-        assert_eq!("{\n  \"cookies\": []\n}\n", string);
+        assert_eq!("[]\n", string);
 
         let mut writer = BufWriter::new(Vec::new());
         save(&cookie_store_all, &mut writer).unwrap();
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-        assert_eq!("{\n  \"cookies\": []\n}\n", string);
+        assert_eq!("[]\n", string);
 
         let mut writer = BufWriter::new(Vec::new());
         save_incl_expired_and_nonpersistent(&cookie_store_all, &mut writer).unwrap();
