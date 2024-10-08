@@ -4,6 +4,7 @@ use cookie::Cookie as RawCookie;
 use idna;
 #[cfg(feature = "public_suffix")]
 use publicsuffix::{List, Psl, Suffix};
+#[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use url::{Host, Url};
@@ -18,7 +19,8 @@ pub fn is_match(domain: &str, request_url: &Url) -> bool {
 }
 
 /// The domain of a `Cookie`
-#[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum CookieDomain {
     /// No Domain attribute in Set-Cookie header
     HostOnly(String),
@@ -365,7 +367,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "serde"))]
 mod serde_tests {
     use serde_json;
     use std::convert::TryFrom;

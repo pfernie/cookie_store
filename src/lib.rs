@@ -26,6 +26,7 @@ mod cookie_path;
 pub use crate::cookie_path::CookiePath;
 mod cookie_store;
 pub use crate::cookie_store::{CookieStore, StoreAction};
+#[cfg(feature = "serde")]
 pub mod serialization;
 mod utils;
 
@@ -49,6 +50,7 @@ impl From<idna::Errors> for IdnaErrors {
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[cfg(feature = "serde")]
 pub(crate) mod rfc3339_fmt {
 
     pub(crate) const RFC3339_FORMAT: &[time::format_description::FormatItem] =

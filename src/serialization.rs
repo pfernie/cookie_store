@@ -50,21 +50,25 @@ fn load_from<R, E, F>(
 }
 
 /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
+#[cfg(feature = "serde_json")]
 pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
     load(reader, |cookies| serde_json::from_str(cookies))
 }
 
 /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
+#[cfg(feature = "serde_json")]
 pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
     load_all(reader, |cookies| serde_json::from_str(cookies))
 }
 
 /// Load RON-formatted cookies from `reader`, skipping any __expired__ cookies
+#[cfg(feature = "serde_ron")]
 pub fn load_ron<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
     load(reader, |cookies| ron::from_str(cookies))
 }
 
 /// Load RON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
+#[cfg(feature = "serde_ron")]
 pub fn load_ron_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
     load_all(reader, |cookies| ron::from_str(cookies))
 }
@@ -95,12 +99,14 @@ pub fn save<W, E, F>(
 
 /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
 /// write them to `writer`
+#[cfg(feature = "serde_json")]
 pub fn save_json<W: Write>(cookie_store: &CookieStore, writer: &mut W) -> StoreResult<()> {
     save(cookie_store, writer, ::serde_json::to_string_pretty)
 }
 
 /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
 /// write them to `writer`
+#[cfg(feature = "serde_ron")]
 pub fn save_ron<W: Write>(cookie_store: &CookieStore, writer: &mut W) -> StoreResult<()> {
     save(cookie_store, writer, |string| {
         ::ron::ser::to_string_pretty(string, ron::ser::PrettyConfig::default())
@@ -129,6 +135,7 @@ pub fn save_incl_expired_and_nonpersistent<W, E, F>(
 }
 
 /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to JSON format and write them to `writer`
+#[cfg(feature = "serde_json")]
 pub fn save_incl_expired_and_nonpersistent_json<W: Write>(
     cookie_store: &CookieStore,
     writer: &mut W,
@@ -137,6 +144,7 @@ pub fn save_incl_expired_and_nonpersistent_json<W: Write>(
 }
 
 /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to RON format and write them to `writer`
+#[cfg(feature = "serde_ron")]
 pub fn save_incl_expired_and_nonpersistent_ron<W: Write>(
     cookie_store: &CookieStore,
     writer: &mut W,

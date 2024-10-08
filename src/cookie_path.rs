@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 use std::cmp::max;
 use std::ops::Deref;
@@ -10,7 +11,8 @@ pub fn is_match(path: &str, request_url: &Url) -> bool {
 }
 
 /// The path of a `Cookie`
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CookiePath(String, bool);
 impl CookiePath {
     /// Determine if `request_url` path-matches this `CookiePath` per

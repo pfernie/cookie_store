@@ -1,11 +1,11 @@
-use std::fmt::{self, Formatter};
 use std::io::{BufRead, Write};
-use std::iter;
 use std::ops::Deref;
 
 use cookie::Cookie as RawCookie;
 use log::debug;
+#[cfg(feature = "serde")]
 use serde::de::{SeqAccess, Visitor};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use url::Url;
 
@@ -385,6 +385,7 @@ impl CookieStore {
 
     /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
     /// write them to `writer`
+    #[cfg(feature = "serde_json")]
     pub fn save_json<W: Write>(&self, writer: &mut W) -> StoreResult<()> {
         self.save(writer, ::serde_json::to_string)
     }
@@ -407,6 +408,7 @@ impl CookieStore {
     }
 
     /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to JSON format and write them to `writer`
+    #[cfg(feature = "serde_json")]
     pub fn save_incl_expired_and_nonpersistent_json<W: Write>(
         &self,
         writer: &mut W,
@@ -455,11 +457,13 @@ impl CookieStore {
     }
 
     /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
+    #[cfg(feature = "serde_json")]
     pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         CookieStore::load(reader, |cookie| ::serde_json::from_str(cookie))
     }
 
     /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
+    #[cfg(feature = "serde_json")]
     pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         CookieStore::load_all(reader, |cookie| ::serde_json::from_str(cookie))
     }
@@ -503,6 +507,7 @@ impl CookieStore {
     }
 }
 
+#[cfg(feature = "serde")]
 impl Serialize for CookieStore {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -512,12 +517,14 @@ impl Serialize for CookieStore {
     }
 }
 
+#[cfg(feature = "serde")]
 struct CookieStoreVisitor;
 
+#[cfg(feature = "serde")]
 impl<'de> Visitor<'de> for CookieStoreVisitor {
     type Value = CookieStore;
 
-    fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(formatter, "a sequence of cookies")
     }
 
@@ -525,10 +532,11 @@ impl<'de> Visitor<'de> for CookieStoreVisitor {
     where
         A: SeqAccess<'de>,
     {
-        CookieStore::from_cookies(iter::from_fn(|| seq.next_element().transpose()), false)
+        CookieStore::from_cookies(std::iter::from_fn(|| seq.next_element().transpose()), false)
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for CookieStore {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
