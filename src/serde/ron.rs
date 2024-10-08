@@ -1,4 +1,5 @@
 //! De/serialization via the RON format
+//! Requires feature `serde_ron`
 
 use std::io::{BufRead, Write};
 

@@ -1,4 +1,5 @@
 //! De/serialization via the JSON format
+//! Requires feature `serde_json`
 
 use std::io::{BufRead, Write};
 
