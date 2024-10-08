@@ -154,16 +154,13 @@ pub fn save_incl_expired_and_nonpersistent_ron<W: Write>(
     })
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(all(test, feature = "serde_json"))]
+mod tests_json {
     use std::io::BufWriter;
 
-    use super::{
-        save_incl_expired_and_nonpersistent_json, save_incl_expired_and_nonpersistent_ron,
-        save_json, save_ron,
-    };
+    use super::{ save_incl_expired_and_nonpersistent_json, save_json };
 
-    use super::{load_json, load_json_all, load_ron, load_ron_all};
+    use super::{ load_json, load_json_all };
 
     fn cookie_json() -> String {
         r#"{
@@ -274,6 +271,14 @@ mod tests {
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
         assert_eq!(cookie, string);
     }
+}
+
+#[cfg(all(test, feature = "serde_ron"))]
+mod tests_ron {
+    use std::io::BufWriter;
+
+    use super::{load_ron, load_ron_all};
+    use super::{ save_incl_expired_and_nonpersistent_ron, save_ron };
 
     fn cookie_ron() -> String {
         r#"(
