@@ -7,35 +7,8 @@
 //! Please refer to the [reqwest_cookie_store](https://crates.io/crates/reqwest_cookie_store) for
 //! an example of using this library along with [reqwest](https://crates.io/crates/reqwest).
 //!
-//! # Feature flags
-//!
-//! ## `default`
-//! Default features: `[public_suffix, serde_json]`.
-//!
-//! ## `preserve_order`
-//! If enabled, [`CookieStore`] will use [`indexmap::IndexMap`] internally, and [`Cookie`]
-//! insertion order will be preserved. Adds dependency `indexmap`.
-//!
-//! ## `public_suffix`
-//! __Enabled by default__. Add support for public suffix lists, as provided by
-//! [publicsuffix](https://crates.io/crates/publicsuffix).
-//!
-//! ## `wasm-bindgen`
-//! Enabled transitive feature `time/wasm-bindgen`; necessary in `wasm` contexts.
-//!
-//! ## `serde`
-//! Supports generic (format-agnostic) de/serialization for a `CookieStore`. Adds dependencies `serde` and `serde_derive`.
-//!
-//! ## `serde_json`
-//! __Enabled by default__. Supports de/serialization for a `CookieStore` via the JSON format. Enables
-//! feature `serde` and adds depenency `serde_json`.
-//!
-//! ## `serde_ron`
-//! Supports de/serialization for a `CookieStore` via the RON format. Enables
-//! feature `serde` and adds depenency `ron`.
-//!
-//! ## `log_secure_cookie_values`
-//! Enable logging the values of cookies marked 'secure', off by default as values may be sensitive
+//! ## Feature flags
+#![doc = document_features::document_features!()]
 
 use idna;
 
