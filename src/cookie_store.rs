@@ -3,10 +3,6 @@ use std::ops::Deref;
 
 use cookie::Cookie as RawCookie;
 use log::debug;
-#[cfg(feature = "serde")]
-use serde::de::{SeqAccess, Visitor};
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use url::Url;
 
 use crate::cookie::Cookie;
@@ -383,13 +379,6 @@ impl CookieStore {
         Ok(())
     }
 
-    /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
-    /// write them to `writer`
-    #[cfg(feature = "serde_json")]
-    pub fn save_json<W: Write>(&self, writer: &mut W) -> StoreResult<()> {
-        self.save(writer, ::serde_json::to_string)
-    }
-
     /// Serialize all (including __expired__ and __non-persistent__) cookies in the store with `cookie_to_string` and write them to `writer`
     pub fn save_incl_expired_and_nonpersistent<W, E, F>(
         &self,
@@ -405,15 +394,6 @@ impl CookieStore {
             writeln!(writer, "{}", cookie_to_string(cookie)?)?;
         }
         Ok(())
-    }
-
-    /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to JSON format and write them to `writer`
-    #[cfg(feature = "serde_json")]
-    pub fn save_incl_expired_and_nonpersistent_json<W: Write>(
-        &self,
-        writer: &mut W,
-    ) -> StoreResult<()> {
-        self.save_incl_expired_and_nonpersistent(writer, ::serde_json::to_string)
     }
 
     /// Load cookies from `reader`, deserializing with `cookie_from_str`, skipping any __expired__
@@ -456,18 +436,6 @@ impl CookieStore {
         Self::from_cookies(cookies, include_expired)
     }
 
-    /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
-    #[cfg(feature = "serde_json")]
-    pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
-        CookieStore::load(reader, |cookie| ::serde_json::from_str(cookie))
-    }
-
-    /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
-    #[cfg(feature = "serde_json")]
-    pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
-        CookieStore::load_all(reader, |cookie| ::serde_json::from_str(cookie))
-    }
-
     /// Create a `CookieStore` from an iterator of `Cookie` values. When
     /// `include_expired` is `true`, both __expired__ and __unexpired__ cookies in the incoming
     /// iterator will be included in the produced `CookieStore`; otherwise, only
@@ -507,42 +475,72 @@ impl CookieStore {
     }
 }
 
-#[cfg(feature = "serde")]
-impl Serialize for CookieStore {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.collect_seq(self.iter_unexpired().filter(|c| c.is_persistent()))
+
+#[cfg(feature = "serde_json")]
+impl CookieStore {
+    /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
+    /// write them to `writer`
+    pub fn save_json<W: Write>(&self, writer: &mut W) -> StoreResult<()> {
+        self.save(writer, ::serde_json::to_string)
+    }
+
+    /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to JSON format and write them to `writer`
+    pub fn save_incl_expired_and_nonpersistent_json<W: Write>(
+        &self,
+        writer: &mut W,
+    ) -> StoreResult<()> {
+        self.save_incl_expired_and_nonpersistent(writer, ::serde_json::to_string)
+    }
+
+    /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
+    pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
+        CookieStore::load(reader, |cookie| ::serde_json::from_str(cookie))
+    }
+
+    /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
+    pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
+        CookieStore::load_all(reader, |cookie| ::serde_json::from_str(cookie))
     }
 }
 
 #[cfg(feature = "serde")]
-struct CookieStoreVisitor;
+mod serde_legacy {
+    use serde::de::{SeqAccess, Visitor};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for CookieStoreVisitor {
-    type Value = CookieStore;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "a sequence of cookies")
+    impl Serialize for super::CookieStore {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.collect_seq(self.iter_unexpired().filter(|c| c.is_persistent()))
+        }
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        CookieStore::from_cookies(std::iter::from_fn(|| seq.next_element().transpose()), false)
-    }
-}
+    struct CookieStoreVisitor;
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for CookieStore {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_seq(CookieStoreVisitor)
+    impl<'de> Visitor<'de> for CookieStoreVisitor {
+        type Value = super::CookieStore;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(formatter, "a sequence of cookies")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            super::CookieStore::from_cookies(std::iter::from_fn(|| seq.next_element().transpose()), false)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for super::CookieStore {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer.deserialize_seq(CookieStoreVisitor)
+        }
     }
 }
 
@@ -556,36 +554,6 @@ mod tests {
     use time::OffsetDateTime;
 
     use crate::utils::test as test_utils;
-
-    #[cfg(feature = "serde_json")]
-    macro_rules! dump_json {
-        ($e: expr, $i: ident) => {{
-            use serde_json;
-            println!("");
-            println!(
-                "==== {}: {} ====",
-                $e,
-                time::OffsetDateTime::now_utc()
-                    .format(crate::rfc3339_fmt::RFC3339_FORMAT)
-                    .unwrap()
-            );
-            for c in $i.iter_any() {
-                println!(
-                    "{} {}",
-                    if c.is_expired() {
-                        "XXXXX"
-                    } else if c.is_persistent() {
-                        "PPPPP"
-                    } else {
-                        "     "
-                    },
-                    serde_json::to_string(c).unwrap()
-                );
-                println!("----------------");
-            }
-            println!("================");
-        }};
-    }
 
     macro_rules! inserted {
         ($e: expr) => {
@@ -1072,6 +1040,36 @@ mod tests {
             ));
             matches_are(&store, secure_uri, vec!["cookie1=1a"]);
         }
+    }
+
+    #[cfg(feature = "serde_json")]
+    macro_rules! dump_json {
+        ($e: expr, $i: ident) => {{
+            use serde_json;
+            println!("");
+            println!(
+                "==== {}: {} ====",
+                $e,
+                time::OffsetDateTime::now_utc()
+                    .format(crate::rfc3339_fmt::RFC3339_FORMAT)
+                    .unwrap()
+            );
+            for c in $i.iter_any() {
+                println!(
+                    "{} {}",
+                    if c.is_expired() {
+                        "XXXXX"
+                    } else if c.is_persistent() {
+                        "PPPPP"
+                    } else {
+                        "     "
+                    },
+                    serde_json::to_string(c).unwrap()
+                );
+                println!("----------------");
+            }
+            println!("================");
+        }};
     }
 
     #[test]
