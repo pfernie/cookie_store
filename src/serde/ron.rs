@@ -1,3 +1,5 @@
+//! De/serialization via the RON format
+
 use std::io::{BufRead, Write};
 
 use crate::cookie_store::{StoreResult, CookieStore};

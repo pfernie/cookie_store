@@ -1,3 +1,5 @@
+//! De/serialization functionality
+
 use std::io::{BufRead, Write};
 
 use crate::{Cookie, cookie_store::StoreResult, CookieStore};

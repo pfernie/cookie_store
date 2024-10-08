@@ -477,14 +477,36 @@ impl CookieStore {
 
 
 #[cfg(feature = "serde_json")]
+/// Legacy serialization implementations. These methods do **not** produce/consume valid JSON output compatible with
+/// typical JSON libraries/tools.
 impl CookieStore {
     /// Serialize any __unexpired__ and __persistent__ cookies in the store to JSON format and
     /// write them to `writer`
+    ///
+    /// __NB__: this method does not produce valid JSON which can be directly loaded; such output
+    /// must be loaded via the corresponding method [CookieStore::load_json]. For a more
+    /// robust/universal
+    /// JSON format, see [crate::serde::json], which produces output __incompatible__ with this
+    /// method.
+    #[deprecated(
+        since = "0.22.0",
+        note = "See `cookie_store::serde` modules for more robust de/serialization options"
+    )]
     pub fn save_json<W: Write>(&self, writer: &mut W) -> StoreResult<()> {
         self.save(writer, ::serde_json::to_string)
     }
 
     /// Serialize all (including __expired__ and __non-persistent__) cookies in the store to JSON format and write them to `writer`
+    ///
+    /// __NB__: this method does not produce valid JSON which can be directly loaded; such output
+    /// must be loaded via the corresponding method [CookieStore::load_json]. For a more
+    /// robust/universal
+    /// JSON format, see [crate::serde::json], which produces output __incompatible__ with this
+    /// method.
+    #[deprecated(
+        since = "0.22.0",
+        note = "See `cookie_store::serde` modules for more robust de/serialization options"
+    )]
     pub fn save_incl_expired_and_nonpersistent_json<W: Write>(
         &self,
         writer: &mut W,
@@ -493,17 +515,38 @@ impl CookieStore {
     }
 
     /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies
+    ///
+    /// __NB__: this method does not expect true valid JSON; it is designed to load output
+    /// from the corresponding method [CookieStore::save_json]. For a more robust/universal
+    /// JSON format, see [crate::serde::json], which produces output __incompatible__ with this
+    /// method.
+    #[deprecated(
+        since = "0.22.0",
+        note = "See `cookie_store::serde` modules for more robust de/serialization options"
+    )]
     pub fn load_json<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         CookieStore::load(reader, |cookie| ::serde_json::from_str(cookie))
     }
 
     /// Load JSON-formatted cookies from `reader`, loading both __expired__ and __unexpired__ cookies
+    ///
+    /// __NB__: this method does not expect true valid JSON; it is designed to load output
+    /// from the corresponding method [CookieStore::save_json]. For a more robust/universal
+    /// JSON format, see [crate::serde::json], which produces output __incompatible__ with this
+    /// method.
+    #[deprecated(
+        since = "0.22.0",
+        note = "See `cookie_store::serde` modules for more robust de/serialization options"
+    )]
     pub fn load_json_all<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
         CookieStore::load_all(reader, |cookie| ::serde_json::from_str(cookie))
     }
 }
 
 #[cfg(feature = "serde")]
+/// Legacy de/serialization implementation which elides the collection-nature of the contained
+/// cookies. Suitable for line-oriented cookie persistence, but prefer/consider
+/// `cookie_store::serde` modules for more universally consumable serialization formats.
 mod serde_legacy {
     use serde::de::{SeqAccess, Visitor};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -1191,6 +1234,7 @@ mod tests {
     }
 
     #[cfg(feature = "serde_json")]
+    #[allow(deprecated)]
     mod serde_json_tests {
         use super::{CookieStore, StoreAction, add_cookie, make_match_store};
         use crate::cookie::Cookie;
