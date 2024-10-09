@@ -3,13 +3,12 @@
 //! Provides an implementation for storing and retrieving [`Cookie`]s per the path and domain matching
 //! rules specified in [RFC6265](https://datatracker.ietf.org/doc/html/rfc6265).
 //!
-//! ## Feature `preserve_order`
-//! If enabled, [`CookieStore`] will use [`indexmap::IndexMap`] internally, and [`Cookie`]
-//! insertion order will be preserved. Adds dependency `indexmap`.
-//!
 //! ## Example
 //! Please refer to the [reqwest_cookie_store](https://crates.io/crates/reqwest_cookie_store) for
 //! an example of using this library along with [reqwest](https://crates.io/crates/reqwest).
+//!
+//! ## Feature flags
+#![doc = document_features::document_features!()]
 
 use idna;
 
@@ -26,6 +25,8 @@ mod cookie_path;
 pub use crate::cookie_path::CookiePath;
 mod cookie_store;
 pub use crate::cookie_store::{CookieStore, StoreAction};
+#[cfg(feature = "serde")]
+pub mod serde;
 mod utils;
 
 #[derive(Debug)]
@@ -48,6 +49,7 @@ impl From<idna::Errors> for IdnaErrors {
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[cfg(feature = "serde")]
 pub(crate) mod rfc3339_fmt {
 
     pub(crate) const RFC3339_FORMAT: &[time::format_description::FormatItem] =

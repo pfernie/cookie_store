@@ -4,6 +4,7 @@ use crate::cookie_path::CookiePath;
 
 use crate::utils::{is_http_scheme, is_secure};
 use cookie::{Cookie as RawCookie, CookieBuilder as RawCookieBuilder, ParseError};
+#[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
@@ -68,11 +69,12 @@ impl From<ParseError> for Error {
 pub type CookieResult<'a> = Result<Cookie<'a>, Error>;
 
 /// A cookie conforming more closely to [IETF RFC6265](https://datatracker.ietf.org/doc/html/rfc6265)
-#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Cookie<'a> {
     /// The parsed Set-Cookie data
-    #[serde(serialize_with = "serde_raw_cookie::serialize")]
-    #[serde(deserialize_with = "serde_raw_cookie::deserialize")]
+    #[cfg_attr(feature = "serde", serde(serialize_with = "serde_raw_cookie::serialize"))]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "serde_raw_cookie::deserialize"))]
     raw_cookie: RawCookie<'a>,
     /// The Path attribute from a Set-Cookie header or the default-path as
     /// determined from
@@ -91,6 +93,7 @@ pub struct Cookie<'a> {
     pub expires: CookieExpiration,
 }
 
+#[cfg(feature = "serde")]
 mod serde_raw_cookie {
     use cookie::Cookie as RawCookie;
     use serde::de::Error;
@@ -723,8 +726,8 @@ mod tests {
     }
 }
 
-#[cfg(test)]
-mod serde_tests {
+#[cfg(all(test, feature = "serde_json"))]
+mod serde_json_tests {
     use crate::cookie::Cookie;
     use crate::cookie_expiration::CookieExpiration;
     use crate::utils::test as test_utils;

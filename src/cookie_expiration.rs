@@ -1,14 +1,16 @@
 use std;
 
+#[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 use time::{self, OffsetDateTime};
 
 /// When a given `Cookie` expires
-#[derive(Eq, Clone, Debug, Serialize, Deserialize)]
+#[derive(Eq, Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum CookieExpiration {
     /// `Cookie` expires at the given UTC time, as set from either the Max-Age
     /// or Expires attribute of a Set-Cookie header
-    #[serde(with = "crate::rfc3339_fmt")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::rfc3339_fmt"))]
     AtUtc(OffsetDateTime),
     /// `Cookie` expires at the end of the current `Session`; this means the cookie
     /// is not persistent
