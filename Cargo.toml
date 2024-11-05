@@ -39,7 +39,7 @@ serde_ron = ["serde", "dep:ron"]
 
 [dependencies]
 document-features = "0.2.10"
-idna = "0.5.0"
+idna = "1.0"
 log = "0.4.17"
 time = "0.3.16"
 url = "2.3.1"
