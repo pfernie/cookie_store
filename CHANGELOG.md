@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.21.1] - 2024-11-09
+
+### Documentation
+
+- Update CONTRIBUTORS.md
+- Switch to using `document-feature` for genearating feature flag documentation
+- Improve documentation around features
+- Add documentation around legacy serialization vs. `serde` module
+
+### Features
+
+- Gate serialization behind features `serde{,_json,_ron}`
+
+### Miscellaneous Tasks
+
+- Bump `indexmap` to `2.6.0`
+
+### Build
+
+- Set `rust-version=1.63.0`
+- Add `serde_json` as a default feature
+- Specify feature dependencies with explcit `dep:`
+
+### Ci
+
+- Split ci check step `build` into `build` + `test`. Add `msrv` job
+
+### Refact
+
+- De/serialize through simple `Vec` instead of `CookieStoreSerialized`
+- Collect legacy `mod cookie_store` serialization impl
+- Rename `mod serialization` -> `serde`; split out `json`, `ron`
+- Split `ron` and `json` serialization tests
+- Reorganize tests to respect `serde*` features
+- Move serialization into dedicated `mod serialization`
+
 ## [0.21.0] - 2024-02-08
 
 ### Miscellaneous Tasks
