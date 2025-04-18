@@ -1,5 +1,4 @@
 //! De/serialization functionality
-//! Requires feature `serde`
 
 use std::io::{BufRead, Write};
 
