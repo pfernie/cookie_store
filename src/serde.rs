@@ -6,6 +6,7 @@ use crate::{Cookie, cookie_store::StoreResult, CookieStore};
 
 #[cfg(feature = "serde_json")]
 pub mod json;
+pub mod netscape;
 #[cfg(feature = "serde_ron")]
 pub mod ron;
 
