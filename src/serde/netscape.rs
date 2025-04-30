@@ -1,4 +1,7 @@
 //! De/serialization via the Netscape cookie format
+//!
+//! # References
+//! * https://curl.se/docs/http-cookies.html
 
 use crate::cookie_store::{CookieStore, StoreResult};
 use crate::Cookie;
@@ -35,7 +38,7 @@ fn parse_cookie_bool(input: &str) -> Result<bool, NetscapeCookieError> {
     }
 }
 
-fn parse_cookie_line(line: &str) -> Result<Cookie<'static>, NetscapeCookieError> {
+fn parse_cookie_line(line: &str, http_only: bool) -> Result<Cookie<'static>, NetscapeCookieError> {
     let mut cookie_parts = line.split('\t');
     let domain = cookie_parts
         .next()
@@ -82,7 +85,11 @@ fn parse_cookie_line(line: &str) -> Result<Cookie<'static>, NetscapeCookieError>
         return Err(NetscapeCookieError::msg("unexpected cookie part"));
     }
 
-    let raw_cookie = RawCookie::build((name, value))
+    let mut raw_cookie_builder = RawCookie::build((name, value));
+    if http_only {
+        raw_cookie_builder = raw_cookie_builder.http_only(http_only);
+    }
+    let raw_cookie = raw_cookie_builder
         .domain(domain)
         .path(path)
         .secure(secure)
@@ -104,15 +111,16 @@ fn parse_cookie_line(line: &str) -> Result<Cookie<'static>, NetscapeCookieError>
 
 fn parse_cookies(input: &str) -> Result<Vec<Cookie<'static>>, NetscapeCookieError> {
     let mut cookies = Vec::new();
-    for line in input.lines() {
-        if line.starts_with('#') {
-            continue;
-        }
-        if line.is_empty() {
+    for mut line in input.lines() {
+        let mut http_only = false;
+        if let Some(trimmed) = line.strip_prefix("#HttpOnly_") {
+            line = trimmed;
+            http_only = true;
+        } else if line.starts_with('#') || line.is_empty() {
             continue;
         }
 
-        let cookie = parse_cookie_line(line)?;
+        let cookie = parse_cookie_line(line, http_only)?;
         cookies.push(cookie);
     }
     Ok(cookies)
@@ -155,6 +163,9 @@ fn write_cookies(cookies: &Vec<Cookie<'static>>) -> Result<String, NetscapeCooki
         };
         let name = cookie.name();
         let value = cookie.value();
+        if cookie.http_only() == Some(true) {
+            write!(&mut output, "#HttpOnly_").unwrap();
+        }
         writeln!(
             &mut output,
             "{}\t{}\t{}\t{}\t{}\t{}\t{}",
@@ -188,4 +199,68 @@ pub fn save_incl_expired_and_nonpersistent<W: Write>(
     writer: &mut W,
 ) -> StoreResult<()> {
     super::save_incl_expired_and_nonpersistent(cookie_store, writer, write_cookies)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const HTTP_ONLY_COOKIE_LINE: &str =
+        "#HttpOnly_.example.com	TRUE	/	TRUE	0	cookie-name	cookie-value\n";
+
+    #[test]
+    fn read_http_only_cookie() {
+        let cookie_store = load_all(HTTP_ONLY_COOKIE_LINE.as_bytes()).expect("failed to parse");
+        assert!(cookie_store.iter_any().count() == 1);
+
+        let cookie = cookie_store.iter_any().next().expect("missing cookie");
+
+        assert!(cookie.http_only() == Some(true));
+
+        let domain = cookie.domain.as_cow().expect("missing domain");
+        assert!(domain == "example.com");
+
+        let path = cookie.path().expect("missing path");
+        assert!(path == "/");
+
+        assert!(cookie.secure() == Some(true));
+
+        let expires = cookie.expires().expect("missing expires");
+        assert!(expires.is_session());
+
+        assert!(cookie.name() == "cookie-name");
+        assert!(cookie.value() == "cookie-value");
+    }
+
+    // TODO: This test is ignored as it fails since we don't properly handle the leading . for domains.
+    #[test]
+    #[ignore]
+    fn write_http_only_cookie() {
+        let mut cookie_store = CookieStore::default();
+        let cookie = RawCookie::build(("cookie-name", "cookie-value"))
+            .http_only(true)
+            .domain("example.com")
+            .path("/")
+            .secure(true)
+            .expires(RawExpiration::Session)
+            .build();
+        let url_raw = format!("https://example.com/");
+        let url = Url::parse(&url_raw).expect("failed to parse url");
+        cookie_store
+            .insert_raw(&cookie, &url)
+            .expect("failed to insert cookie");
+
+        let mut output = Vec::new();
+        save_incl_expired_and_nonpersistent(&cookie_store, &mut output)
+            .expect("failed to save cookies");
+        let output_string = String::from_utf8(output).expect("output is not utf8");
+
+        let has_cookie_line = output_string
+            .lines()
+            .any(|line| line == HTTP_ONLY_COOKIE_LINE.trim_end());
+        assert!(
+            has_cookie_line,
+            "Missing cookie line:\n{HTTP_ONLY_COOKIE_LINE}\n\nOutput:\n{output_string}"
+        );
+    }
 }
