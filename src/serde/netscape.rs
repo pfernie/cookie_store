@@ -2,10 +2,12 @@
 //!
 //! # References
 //! * https://curl.se/docs/http-cookies.html
+//! * https://everything.curl.dev/http/cookies/fileformat.html
 
 use crate::cookie_store::{CookieStore, StoreResult};
 use crate::Cookie;
-use cookie::{Cookie as RawCookie, Expiration as RawExpiration};
+use crate::CookieExpiration;
+use cookie::Cookie as RawCookie;
 use std::fmt::Write as _;
 use std::io::{BufRead, Write};
 use time::OffsetDateTime;
@@ -147,19 +149,17 @@ fn write_cookies(cookies: &Vec<Cookie<'static>>) -> Result<String, NetscapeCooki
     writeln!(&mut output).unwrap();
 
     for cookie in cookies.iter() {
-        let cookie: &RawCookie = &*cookie;
-
         // TODO: Find a way to include the leading dot, if it exists.
-        let domain = cookie.domain().ok_or(NetscapeCookieError::msg(
+        let domain = cookie.domain.as_cow().ok_or(NetscapeCookieError::msg(
             "cannot serialize cookie with missing domain",
         ))?;
         // TODO: Figure out how to get this info from the cookie.
         let subdomains = cookie_bool_str(false);
-        let path = cookie.path().unwrap_or("/");
+        let path: &str = &cookie.path;
         let secure = cookie_bool_str(cookie.secure().unwrap_or(false));
-        let expires = match cookie.expires() {
-            Some(RawExpiration::DateTime(datetime)) => datetime.unix_timestamp(),
-            Some(RawExpiration::Session) | None => 0,
+        let expires = match cookie.expires {
+            CookieExpiration::AtUtc(datetime) => datetime.unix_timestamp(),
+            CookieExpiration::SessionEnd => 0,
         };
         let name = cookie.name();
         let value = cookie.value();
@@ -204,9 +204,10 @@ pub fn save_incl_expired_and_nonpersistent<W: Write>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use cookie::Expiration as RawExpiration;
 
     const HTTP_ONLY_COOKIE_LINE: &str =
-        "#HttpOnly_.example.com	TRUE	/	TRUE	0	cookie-name	cookie-value\n";
+        "#HttpOnly_example.com\tFALSE\t/\tTRUE\t0\tcookie-name\tcookie-value\n";
 
     #[test]
     fn read_http_only_cookie() {
@@ -232,9 +233,7 @@ mod test {
         assert!(cookie.value() == "cookie-value");
     }
 
-    // TODO: This test is ignored as it fails since we don't properly handle the leading . for domains.
     #[test]
-    #[ignore]
     fn write_http_only_cookie() {
         let mut cookie_store = CookieStore::default();
         let cookie = RawCookie::build(("cookie-name", "cookie-value"))
