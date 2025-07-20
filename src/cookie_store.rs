@@ -321,9 +321,9 @@ impl CookieStore {
                 if self
                     .cookies
                     .entry(String::from(&cookie.domain))
-                    .or_insert_with(Map::new)
+                    .or_default()
                     .entry(String::from(&cookie.path))
-                    .or_insert_with(Map::new)
+                    .or_default()
                     .insert(cookie.name().to_owned(), cookie)
                     .is_none()
                 {
