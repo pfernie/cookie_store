@@ -736,19 +736,14 @@ mod serde_json_tests {
     fn encode_decode(c: &Cookie<'_>, expected: serde_json::Value) {
         let encoded = serde_json::to_value(c).unwrap();
         assert_eq!(
-            expected,
-            encoded,
-            "\nexpected: '{}'\n encoded: '{}'",
-            expected.to_string(),
-            encoded.to_string()
+            expected, encoded,
+            "\nexpected: '{expected}'\n encoded: '{encoded}'"
         );
         let decoded: Cookie<'_> = serde_json::from_value(encoded).unwrap();
         assert_eq!(
-            *c,
-            decoded,
+            *c, decoded,
             "\nexpected: '{}'\n decoded: '{}'",
-            c.to_string(),
-            decoded.to_string()
+            **c, *decoded
         );
     }
 
