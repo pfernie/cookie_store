@@ -132,8 +132,8 @@ impl TryFrom<&str> for CookieDomain {
             .map(|domain| {
                 if domain.is_empty() || "." == domain {
                     CookieDomain::Empty
-                } else if domain.starts_with('.') {
-                    CookieDomain::Suffix(String::from(&domain[1..]))
+                } else if let Some(stripped_suffix) = domain.strip_prefix('.') {
+                    CookieDomain::Suffix(String::from(stripped_suffix))
                 } else {
                     CookieDomain::Suffix(domain)
                 }
