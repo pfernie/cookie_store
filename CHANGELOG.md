@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.22.0] - 2025-07-20
+
+### Bug Fixes
+
+- Guard `public_suffix_list` in `new()` w/ `#cfg`
+- [**breaking**] Add `new_with_public_suffix` ctor under `public_suffix` feature
+
+### Documentation
+
+- Update CONTRIBUTORS.md
+
+### Miscellaneous Tasks
+
+- Rustfmt
+
+### Ci
+
+- Update `release.sh` to use `cargo semver-checks`
+
 ## [0.21.1] - 2024-11-09
 
 ### Documentation
