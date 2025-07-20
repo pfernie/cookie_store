@@ -18,8 +18,20 @@ jobs:
       - build
       - test
       - style
+      - clippy
     steps:
       - run: exit 0
+
+  clippy:
+    name: Clippy check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run clippy
+        run: RUSTFLAGS="-Dwarnings" cargo clippy --all-targets --all-features
 
   style:
     name: Check style
