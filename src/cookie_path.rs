@@ -141,7 +141,7 @@ mod tests {
     }
 
     fn do_match(exp: bool, cp: &str, rp: &str) {
-        let url = Url::parse(&format!("http://example.com{}", rp))
+        let url = Url::parse(&format!("http://example.com{rp}"))
             .expect("unable to parse url in do_match");
         let cp = CookiePath::parse(cp).expect("unable to parse CookiePath in do_match");
         assert!(

@@ -49,7 +49,7 @@ pub mod test {
                     "; Expires={}",
                     e.format(time::macros::format_description!("[weekday repr:short], [day] [month repr:short] [year] [hour]:[minute]:[second] GMT")).unwrap()
                 )),
-                max_age.map_or(String::from(""), |m| format!("; Max-Age={}", m))
+                max_age.map_or(String::from(""), |m| format!("; Max-Age={m}"))
             ),
             &url(url_str),
         )

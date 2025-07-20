@@ -57,8 +57,8 @@ impl CookieDomain {
             .ok_or(CookieError::NonRelativeScheme)
             .map(|h| match h {
                 Host::Domain(d) => CookieDomain::HostOnly(d.into()),
-                Host::Ipv4(addr) => CookieDomain::HostOnly(format!("{}", addr)),
-                Host::Ipv6(addr) => CookieDomain::HostOnly(format!("[{}]", addr)),
+                Host::Ipv4(addr) => CookieDomain::HostOnly(format!("{addr}")),
+                Host::Ipv6(addr) => CookieDomain::HostOnly(format!("[{addr}]")),
             })
     }
 
@@ -201,10 +201,10 @@ mod tests {
     #[inline]
     fn variants(expected: bool, cookie_domain: &CookieDomain, url: &str) {
         matches(expected, cookie_domain, url);
-        matches(expected, cookie_domain, &format!("{}/", url));
-        matches(expected, cookie_domain, &format!("{}:8080", url));
-        matches(expected, cookie_domain, &format!("{}/foo/bar", url));
-        matches(expected, cookie_domain, &format!("{}:8080/foo/bar", url));
+        matches(expected, cookie_domain, &format!("{url}/"));
+        matches(expected, cookie_domain, &format!("{url}:8080"));
+        matches(expected, cookie_domain, &format!("{url}/foo/bar"));
+        matches(expected, cookie_domain, &format!("{url}:8080/foo/bar"));
     }
 
     #[test]
@@ -375,16 +375,12 @@ mod serde_json_tests {
         let encoded = serde_json::to_string(cd).unwrap();
         assert!(
             exp_json == encoded,
-            "expected: '{}'\n encoded: '{}'",
-            exp_json,
-            encoded
+            "expected: '{exp_json}'\n encoded: '{encoded}'"
         );
         let decoded: CookieDomain = serde_json::from_str(&encoded).unwrap();
         assert!(
             *cd == decoded,
-            "expected: '{:?}'\n decoded: '{:?}'",
-            cd,
-            decoded
+            "expected: '{cd:?}'\n decoded: '{decoded:?}'"
         );
     }
 

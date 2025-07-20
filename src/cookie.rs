@@ -279,7 +279,7 @@ mod tests {
 
     fn cmp_domain(cookie: &str, url: &str, exp: CookieDomain) {
         let ua = test_utils::make_cookie(cookie, url, None, None);
-        assert!(ua.domain == exp, "\n{:?}", ua);
+        assert!(ua.domain == exp, "\n{ua:?}");
     }
 
     #[test]
@@ -311,13 +311,13 @@ mod tests {
             "cookie1=value1; Domain=notmydomain.com",
             &test_utils::url("http://example.com/foo/bar"),
         );
-        assert!(ua.is_err(), "{:?}", ua);
+        assert!(ua.is_err(), "{ua:?}");
     }
 
     #[test]
     fn domains() {
         fn domain_from(domain: &str, request_url: &str, is_some: bool) {
-            let cookie_str = format!("cookie1=value1; Domain={}", domain);
+            let cookie_str = format!("cookie1=value1; Domain={domain}");
             let raw_cookie = RawCookie::parse(cookie_str).unwrap();
             let cookie = Cookie::try_from_raw_cookie(&raw_cookie, &test_utils::url(request_url));
             assert_eq!(is_some, cookie.is_ok())
@@ -344,7 +344,7 @@ mod tests {
         let c = RawCookie::parse("cookie1=value1; HttpOnly").unwrap();
         let url = Url::parse("ftp://example.com/foo/bar").unwrap();
         let ua = Cookie::try_from_raw_cookie(&c, &url);
-        assert!(ua.is_err(), "{:?}", ua);
+        assert!(ua.is_err(), "{ua:?}");
     }
 
     #[test]
@@ -385,7 +385,7 @@ mod tests {
 
     fn cmp_path(cookie: &str, url: &str, exp: &str) {
         let ua = test_utils::make_cookie(cookie, url, None, None);
-        assert!(String::from(ua.path.clone()) == exp, "\n{:?}", ua);
+        assert!(String::from(ua.path.clone()) == exp, "\n{ua:?}");
     }
 
     #[test]

@@ -61,10 +61,9 @@ pub(crate) mod rfc3339_fmt {
         // An explicit format string is used here, instead of time::format_description::well_known::Rfc3339, to explicitly
         // utilize the 'Z' terminator instead of +00:00 format for Zulu time.
         let s = t.format(&RFC3339_FORMAT).map_err(|e| {
-            println!("{}", e);
+            println!("{e}");
             S::Error::custom(format!(
-                "Could not parse datetime '{}' as RFC3339 UTC format: {}",
-                t, e
+                "Could not parse datetime '{t}' as RFC3339 UTC format: {e}"
             ))
         })?;
         serializer.serialize_str(&s)
@@ -80,8 +79,7 @@ pub(crate) mod rfc3339_fmt {
         time::OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339).map_err(
             |e| {
                 D::Error::custom(format!(
-                    "Could not parse string '{}' as RFC3339 UTC format: {}",
-                    s, e
+                    "Could not parse string '{s}' as RFC3339 UTC format: {e}"
                 ))
             },
         )

@@ -77,13 +77,13 @@ impl CookieStore {
     ) {
         for cookie in cookies {
             if cookie.secure() != Some(true) || cfg!(feature = "log_secure_cookie_values") {
-                debug!("inserting Set-Cookie '{:?}'", cookie);
+                debug!("inserting Set-Cookie '{cookie:?}'");
             } else {
                 debug!("inserting secure cookie '{}'", cookie.name());
             }
 
             if let Err(e) = self.insert_raw(&cookie, url) {
-                debug!("unable to store Set-Cookie: {:?}", e);
+                debug!("unable to store Set-Cookie: {e:?}");
             }
         }
     }
@@ -848,7 +848,7 @@ mod tests {
         // foo.example.com, but the user agent will not accept a cookie with a
         // Domain attribute of "bar.example.com" or of "baz.foo.example.com".
         fn domain_cookie_from(domain: &str, request_url: &str) -> Cookie<'static> {
-            let cookie_str = format!("cookie1=value1; Domain={}", domain);
+            let cookie_str = format!("cookie1=value1; Domain={domain}");
             Cookie::parse(cookie_str, &test_utils::url(request_url)).unwrap()
         }
 
@@ -1060,19 +1060,12 @@ mod tests {
         for e in &exp {
             assert!(
                 matches.iter().any(|m| &m[..] == *e),
-                "{}: matches missing '{}'\nmatches: {:?}\n    exp: {:?}",
-                url,
-                e,
-                matches,
-                exp
+                "{url}: matches missing '{e}'\nmatches: {matches:?}\n    exp: {exp:?}"
             );
         }
         assert!(
             matches.len() == exp.len(),
-            "{}: matches={:?} != exp={:?}",
-            url,
-            matches,
-            exp
+            "{url}: matches={matches:?} != exp={exp:?}"
         );
     }
 
