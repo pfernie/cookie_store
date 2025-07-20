@@ -573,7 +573,10 @@ mod serde_legacy {
         where
             A: SeqAccess<'de>,
         {
-            super::CookieStore::from_cookies(std::iter::from_fn(|| seq.next_element().transpose()), false)
+            super::CookieStore::from_cookies(
+                std::iter::from_fn(|| seq.next_element().transpose()),
+                false,
+            )
         }
     }
 
@@ -965,9 +968,17 @@ mod tests {
             Some(test_utils::in_days(1)),
             None,
         ));
-        assert!(store.iter_any().any(|c| c.name_value() == ("cookie1", "value1")), "did not find expected cookie1=value1 cookie in store");
+        assert!(
+            store
+                .iter_any()
+                .any(|c| c.name_value() == ("cookie1", "value1")),
+            "did not find expected cookie1=value1 cookie in store"
+        );
         store.clear();
-        assert!(store.iter_any().count() == 0, "found unexpected cookies in cleared store");
+        assert!(
+            store.iter_any().count() == 0,
+            "found unexpected cookies in cleared store"
+        );
     }
 
     #[test]
@@ -1236,7 +1247,7 @@ mod tests {
     #[cfg(feature = "serde_json")]
     #[allow(deprecated)]
     mod serde_json_tests {
-        use super::{CookieStore, StoreAction, add_cookie, make_match_store};
+        use super::{add_cookie, make_match_store, CookieStore, StoreAction};
         use crate::cookie::Cookie;
         use crate::CookieError;
 
@@ -1745,7 +1756,5 @@ mod tests {
             assert!(store.get("example.com", "/tmp", "cookie10").is_none());
             assert!(store.get_any("example.com", "/tmp", "cookie10").is_none());
         }
-
     }
 }
-
