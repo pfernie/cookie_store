@@ -469,10 +469,7 @@ mod tests {
             None,
             Some(9223372036854776),
         );
-        assert!(match ua.expires {
-            CookieExpiration::AtUtc(_) => true,
-            _ => false,
-        });
+        assert!(matches!(ua.expires, CookieExpiration::AtUtc(_)));
     }
 
     #[test]
@@ -519,10 +516,7 @@ mod tests {
     fn session_end() {
         let ua =
             test_utils::make_cookie("cookie1=value1", "http://example.com/foo/bar", None, None);
-        assert!(match ua.expires {
-            CookieExpiration::SessionEnd => true,
-            _ => false,
-        });
+        assert!(matches!(ua.expires, CookieExpiration::SessionEnd));
         assert!(!ua.is_expired());
         assert!(!ua.expires_by(&in_days(1)));
         assert!(!ua.expires_by(&in_days(-1)));
