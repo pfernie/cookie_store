@@ -123,7 +123,7 @@ impl CookieDomain {
 
 /// Construct a `CookieDomain::Suffix` from a string, stripping a single leading '.' if present.
 /// If the source string is empty, returns the `CookieDomain::Empty` variant.
-impl<'a> TryFrom<&'a str> for CookieDomain {
+impl TryFrom<&str> for CookieDomain {
     type Error = crate::Error;
     fn try_from(value: &str) -> Result<CookieDomain, Self::Error> {
         idna::domain_to_ascii(value.trim())

@@ -105,7 +105,7 @@ impl Deref for CookiePath {
     }
 }
 
-impl<'a> From<&'a CookiePath> for String {
+impl From<&CookiePath> for String {
     fn from(cp: &CookiePath) -> String {
         cp.0.clone()
     }
