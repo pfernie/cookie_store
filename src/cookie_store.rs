@@ -464,17 +464,20 @@ impl CookieStore {
         })
     }
 
-    pub fn new(
-        #[cfg(feature = "public_suffix")] public_suffix_list: Option<publicsuffix::List>,
-    ) -> Self {
+    pub fn new() -> Self {
         Self {
             cookies: DomainMap::new(),
-            #[cfg(feature = "public_suffix")]
+        }
+    }
+
+    #[cfg(feature = "public_suffix")]
+    pub fn new_with_public_suffix(public_suffix_list: Option<publicsuffix::List>) -> Self {
+        Self {
+            cookies: DomainMap::new(),
             public_suffix_list,
         }
     }
 }
-
 
 #[cfg(feature = "serde_json")]
 /// Legacy serialization implementations. These methods do **not** produce/consume valid JSON output compatible with
