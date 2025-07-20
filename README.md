@@ -6,7 +6,15 @@ rules specified in [RFC6265](https://datatracker.ietf.org/doc/html/rfc6265).
 
 ## Features
 
-* `preserve_order` - if enabled, iteration order of cookies will be maintained in insertion order. Pulls in an additional dependency on the [indexmap](https://crates.io/crates/indexmap) crate.
+* `preserve_order` - uses `indexmap::IndexMap` in lieu of HashMap internally, so cookies are maintained in insertion/creation order
+* `public_suffix` - Add support for public suffix lists, as provided by [publicsuffix](https://crates.io/crates/publicsuffix).
+* `wasm-bindgen` - Enables transitive feature `time/wasm-bindgen`; necessary in `wasm` contexts.
+* `log_secure_cookie_values` - Enable logging the values of cookies marked 'secure', off by default as values may be sensitive
+
+### Serialization
+* `serde` - Supports generic (format-agnostic) de/serialization for a `CookieStore`. Adds dependencies `serde` and `serde_derive`.
+* `serde_json` - Supports de/serialization for a `CookieStore` via the JSON format. Enables feature `serde` and adds depenency `serde_json`.
+* `serde_ron` - Supports de/serialization for a `CookieStore` via the RON format. Enables feature `serde` and adds depenency `ron`.
 
 ## Usage with [reqwest](https://crates.io/crates/reqwest)
 
