@@ -302,7 +302,7 @@ impl CookieStore {
             let cookie_domain = cookie
                 .domain
                 .as_cow()
-                .ok_or_else(|| CookieError::UnspecifiedDomain)?;
+                .ok_or(CookieError::UnspecifiedDomain)?;
             if let Some(old_cookie) = self.get_mut(&cookie_domain, &cookie.path, cookie.name()) {
                 if old_cookie.http_only().unwrap_or(false) && !is_http_scheme(request_url) {
                     // 2.  If the newly created cookie was received from a "non-HTTP"

@@ -45,10 +45,7 @@ where
     let mut cookie_store = String::new();
     reader.read_to_string(&mut cookie_store)?;
     let cookies = cookies_from_str(&cookie_store)?;
-    CookieStore::from_cookies(
-        cookies.into_iter().map(|cookies| Ok(cookies)),
-        include_expired,
-    )
+    CookieStore::from_cookies(cookies.into_iter().map(Ok), include_expired)
 }
 
 /// Serialize any __unexpired__ and __persistent__ cookies in the store with `cookie_to_string`
