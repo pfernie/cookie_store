@@ -101,8 +101,8 @@ mod tests {
     #[test]
     fn max_age_bounds() {
         match CookieExpiration::from(time::Duration::MAX.whole_seconds() as u64 + 1) {
-            CookieExpiration::AtUtc(_) => assert!(true),
-            _ => assert!(false),
+            CookieExpiration::AtUtc(_) => {}
+            _ => unreachable!(),
         }
     }
 
