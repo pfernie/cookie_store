@@ -73,8 +73,14 @@ pub type CookieResult<'a> = Result<Cookie<'a>, Error>;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Cookie<'a> {
     /// The parsed Set-Cookie data
-    #[cfg_attr(feature = "serde", serde(serialize_with = "serde_raw_cookie::serialize"))]
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "serde_raw_cookie::deserialize"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serde_raw_cookie::serialize")
+    )]
+    #[cfg_attr(
+        feature = "serde",
+        serde(deserialize_with = "serde_raw_cookie::deserialize")
+    )]
     raw_cookie: RawCookie<'a>,
     /// The Path attribute from a Set-Cookie header or the default-path as
     /// determined from
