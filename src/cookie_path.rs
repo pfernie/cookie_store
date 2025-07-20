@@ -105,7 +105,7 @@ impl Deref for CookiePath {
     }
 }
 
-impl<'a> From<&'a CookiePath> for String {
+impl From<&CookiePath> for String {
     fn from(cp: &CookiePath) -> String {
         cp.0.clone()
     }
@@ -141,7 +141,7 @@ mod tests {
     }
 
     fn do_match(exp: bool, cp: &str, rp: &str) {
-        let url = Url::parse(&format!("http://example.com{}", rp))
+        let url = Url::parse(&format!("http://example.com{rp}"))
             .expect("unable to parse url in do_match");
         let cp = CookiePath::parse(cp).expect("unable to parse CookiePath in do_match");
         assert!(

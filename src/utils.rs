@@ -1,28 +1,6 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
+use url::Host;
 use url::Url;
-use url::{Host, ParseError as UrlError};
-
-pub trait IntoUrl {
-    fn into_url(self) -> Result<Url, UrlError>;
-}
-
-impl IntoUrl for Url {
-    fn into_url(self) -> Result<Url, UrlError> {
-        Ok(self)
-    }
-}
-
-impl<'a> IntoUrl for &'a str {
-    fn into_url(self) -> Result<Url, UrlError> {
-        Url::parse(self)
-    }
-}
-
-impl<'a> IntoUrl for &'a String {
-    fn into_url(self) -> Result<Url, UrlError> {
-        Url::parse(self)
-    }
-}
 
 pub fn is_http_scheme(url: &Url) -> bool {
     url.scheme().starts_with("http")
@@ -71,7 +49,7 @@ pub mod test {
                     "; Expires={}",
                     e.format(time::macros::format_description!("[weekday repr:short], [day] [month repr:short] [year] [hour]:[minute]:[second] GMT")).unwrap()
                 )),
-                max_age.map_or(String::from(""), |m| format!("; Max-Age={}", m))
+                max_age.map_or(String::from(""), |m| format!("; Max-Age={m}"))
             ),
             &url(url_str),
         )

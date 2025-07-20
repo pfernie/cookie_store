@@ -3,7 +3,7 @@
 
 use std::io::{BufRead, Write};
 
-use crate::cookie_store::{StoreResult, CookieStore};
+use crate::cookie_store::{CookieStore, StoreResult};
 
 /// Load RON-formatted cookies from `reader`, skipping any __expired__ cookies
 pub fn load<R: BufRead>(reader: R) -> StoreResult<CookieStore> {
@@ -38,7 +38,7 @@ mod tests {
     use std::io::BufWriter;
 
     use super::{load, load_all};
-    use super::{ save_incl_expired_and_nonpersistent, save };
+    use super::{save, save_incl_expired_and_nonpersistent};
 
     fn cookie() -> String {
         r#"[
@@ -49,7 +49,8 @@ mod tests {
         expires: AtUtc("2100-08-03T00:38:37Z"),
     ),
 ]
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn cookie_expired() -> String {
@@ -61,7 +62,8 @@ mod tests {
         expires: AtUtc("2000-08-03T00:38:37Z"),
     ),
 ]
-"#.to_string()
+"#
+        .to_string()
     }
 
     #[test]

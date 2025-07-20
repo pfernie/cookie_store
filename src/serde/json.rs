@@ -3,7 +3,7 @@
 
 use std::io::{BufRead, Write};
 
-use crate::cookie_store::{StoreResult, CookieStore};
+use crate::cookie_store::{CookieStore, StoreResult};
 
 /// Load JSON-formatted cookies from `reader`, skipping any __expired__ cookies.
 /// __NB__: This function is not compatible with data produced by [CookieStore::save_json] or
@@ -41,9 +41,9 @@ pub fn save_incl_expired_and_nonpersistent<W: Write>(
 mod tests {
     use std::io::BufWriter;
 
-    use super::{ save_incl_expired_and_nonpersistent, save };
+    use super::{save, save_incl_expired_and_nonpersistent};
 
-    use super::{ load, load_all };
+    use super::{load, load_all};
 
     fn cookie() -> String {
         r#"[
@@ -62,7 +62,7 @@ mod tests {
   }
 ]
 "#
-            .to_string()
+        .to_string()
     }
 
     fn cookie_expired() -> String {
@@ -82,7 +82,7 @@ mod tests {
   }
 ]
 "#
-            .to_string()
+        .to_string()
     }
 
     #[test]

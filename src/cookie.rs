@@ -10,7 +10,6 @@ use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::Deref;
-use time;
 use url::Url;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,8 +72,14 @@ pub type CookieResult<'a> = Result<Cookie<'a>, Error>;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Cookie<'a> {
     /// The parsed Set-Cookie data
-    #[cfg_attr(feature = "serde", serde(serialize_with = "serde_raw_cookie::serialize"))]
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "serde_raw_cookie::deserialize"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serde_raw_cookie::serialize")
+    )]
+    #[cfg_attr(
+        feature = "serde",
+        serde(deserialize_with = "serde_raw_cookie::deserialize")
+    )]
     raw_cookie: RawCookie<'a>,
     /// The Path attribute from a Set-Cookie header or the default-path as
     /// determined from
@@ -274,7 +279,7 @@ mod tests {
 
     fn cmp_domain(cookie: &str, url: &str, exp: CookieDomain) {
         let ua = test_utils::make_cookie(cookie, url, None, None);
-        assert!(ua.domain == exp, "\n{:?}", ua);
+        assert!(ua.domain == exp, "\n{ua:?}");
     }
 
     #[test]
@@ -306,13 +311,13 @@ mod tests {
             "cookie1=value1; Domain=notmydomain.com",
             &test_utils::url("http://example.com/foo/bar"),
         );
-        assert!(ua.is_err(), "{:?}", ua);
+        assert!(ua.is_err(), "{ua:?}");
     }
 
     #[test]
     fn domains() {
         fn domain_from(domain: &str, request_url: &str, is_some: bool) {
-            let cookie_str = format!("cookie1=value1; Domain={}", domain);
+            let cookie_str = format!("cookie1=value1; Domain={domain}");
             let raw_cookie = RawCookie::parse(cookie_str).unwrap();
             let cookie = Cookie::try_from_raw_cookie(&raw_cookie, &test_utils::url(request_url));
             assert_eq!(is_some, cookie.is_ok())
@@ -339,7 +344,7 @@ mod tests {
         let c = RawCookie::parse("cookie1=value1; HttpOnly").unwrap();
         let url = Url::parse("ftp://example.com/foo/bar").unwrap();
         let ua = Cookie::try_from_raw_cookie(&c, &url);
-        assert!(ua.is_err(), "{:?}", ua);
+        assert!(ua.is_err(), "{ua:?}");
     }
 
     #[test]
@@ -380,7 +385,7 @@ mod tests {
 
     fn cmp_path(cookie: &str, url: &str, exp: &str) {
         let ua = test_utils::make_cookie(cookie, url, None, None);
-        assert!(String::from(ua.path.clone()) == exp, "\n{:?}", ua);
+        assert!(String::from(ua.path.clone()) == exp, "\n{ua:?}");
     }
 
     #[test]
@@ -464,10 +469,7 @@ mod tests {
             None,
             Some(9223372036854776),
         );
-        assert!(match ua.expires {
-            CookieExpiration::AtUtc(_) => true,
-            _ => false,
-        });
+        assert!(matches!(ua.expires, CookieExpiration::AtUtc(_)));
     }
 
     #[test]
@@ -514,10 +516,7 @@ mod tests {
     fn session_end() {
         let ua =
             test_utils::make_cookie("cookie1=value1", "http://example.com/foo/bar", None, None);
-        assert!(match ua.expires {
-            CookieExpiration::SessionEnd => true,
-            _ => false,
-        });
+        assert!(matches!(ua.expires, CookieExpiration::SessionEnd));
         assert!(!ua.is_expired());
         assert!(!ua.expires_by(&in_days(1)));
         assert!(!ua.expires_by(&in_days(-1)));
@@ -733,24 +732,18 @@ mod serde_json_tests {
     use crate::utils::test as test_utils;
     use crate::utils::test::*;
     use serde_json::json;
-    use time;
 
     fn encode_decode(c: &Cookie<'_>, expected: serde_json::Value) {
         let encoded = serde_json::to_value(c).unwrap();
         assert_eq!(
-            expected,
-            encoded,
-            "\nexpected: '{}'\n encoded: '{}'",
-            expected.to_string(),
-            encoded.to_string()
+            expected, encoded,
+            "\nexpected: '{expected}'\n encoded: '{encoded}'"
         );
         let decoded: Cookie<'_> = serde_json::from_value(encoded).unwrap();
         assert_eq!(
-            *c,
-            decoded,
+            *c, decoded,
             "\nexpected: '{}'\n decoded: '{}'",
-            c.to_string(),
-            decoded.to_string()
+            **c, *decoded
         );
     }
 

@@ -1,5 +1,3 @@
-use std;
-
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 use time::{self, OffsetDateTime};
@@ -97,15 +95,14 @@ impl From<time::Duration> for CookieExpiration {
 #[cfg(test)]
 mod tests {
     use super::CookieExpiration;
-    use time;
 
     use crate::utils::test::*;
 
     #[test]
     fn max_age_bounds() {
         match CookieExpiration::from(time::Duration::MAX.whole_seconds() as u64 + 1) {
-            CookieExpiration::AtUtc(_) => assert!(true),
-            _ => assert!(false),
+            CookieExpiration::AtUtc(_) => {}
+            _ => unreachable!(),
         }
     }
 

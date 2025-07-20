@@ -1,7 +1,4 @@
-use std;
-
 use cookie::Cookie as RawCookie;
-use idna;
 #[cfg(feature = "public_suffix")]
 use publicsuffix::{List, Psl, Suffix};
 #[cfg(feature = "serde")]
@@ -60,8 +57,8 @@ impl CookieDomain {
             .ok_or(CookieError::NonRelativeScheme)
             .map(|h| match h {
                 Host::Domain(d) => CookieDomain::HostOnly(d.into()),
-                Host::Ipv4(addr) => CookieDomain::HostOnly(format!("{}", addr)),
-                Host::Ipv6(addr) => CookieDomain::HostOnly(format!("[{}]", addr)),
+                Host::Ipv4(addr) => CookieDomain::HostOnly(format!("{addr}")),
+                Host::Ipv6(addr) => CookieDomain::HostOnly(format!("[{addr}]")),
             })
     }
 
@@ -126,7 +123,7 @@ impl CookieDomain {
 
 /// Construct a `CookieDomain::Suffix` from a string, stripping a single leading '.' if present.
 /// If the source string is empty, returns the `CookieDomain::Empty` variant.
-impl<'a> TryFrom<&'a str> for CookieDomain {
+impl TryFrom<&str> for CookieDomain {
     type Error = crate::Error;
     fn try_from(value: &str) -> Result<CookieDomain, Self::Error> {
         idna::domain_to_ascii(value.trim())
@@ -135,8 +132,8 @@ impl<'a> TryFrom<&'a str> for CookieDomain {
             .map(|domain| {
                 if domain.is_empty() || "." == domain {
                     CookieDomain::Empty
-                } else if domain.starts_with('.') {
-                    CookieDomain::Suffix(String::from(&domain[1..]))
+                } else if let Some(stripped_suffix) = domain.strip_prefix('.') {
+                    CookieDomain::Suffix(String::from(stripped_suffix))
                 } else {
                     CookieDomain::Suffix(domain)
                 }
@@ -204,10 +201,10 @@ mod tests {
     #[inline]
     fn variants(expected: bool, cookie_domain: &CookieDomain, url: &str) {
         matches(expected, cookie_domain, url);
-        matches(expected, cookie_domain, &format!("{}/", url));
-        matches(expected, cookie_domain, &format!("{}:8080", url));
-        matches(expected, cookie_domain, &format!("{}/foo/bar", url));
-        matches(expected, cookie_domain, &format!("{}:8080/foo/bar", url));
+        matches(expected, cookie_domain, &format!("{url}/"));
+        matches(expected, cookie_domain, &format!("{url}:8080"));
+        matches(expected, cookie_domain, &format!("{url}/foo/bar"));
+        matches(expected, cookie_domain, &format!("{url}:8080/foo/bar"));
     }
 
     #[test]
@@ -369,7 +366,6 @@ mod tests {
 
 #[cfg(all(test, feature = "serde_json"))]
 mod serde_json_tests {
-    use serde_json;
     use std::convert::TryFrom;
 
     use crate::cookie_domain::CookieDomain;
@@ -379,16 +375,12 @@ mod serde_json_tests {
         let encoded = serde_json::to_string(cd).unwrap();
         assert!(
             exp_json == encoded,
-            "expected: '{}'\n encoded: '{}'",
-            exp_json,
-            encoded
+            "expected: '{exp_json}'\n encoded: '{encoded}'"
         );
         let decoded: CookieDomain = serde_json::from_str(&encoded).unwrap();
         assert!(
             *cd == decoded,
-            "expected: '{:?}'\n decoded: '{:?}'",
-            cd,
-            decoded
+            "expected: '{cd:?}'\n decoded: '{decoded:?}'"
         );
     }
 
