@@ -10,8 +10,6 @@
 //! ## Feature flags
 #![doc = document_features::document_features!()]
 
-use idna;
-
 pub use ::cookie::{Cookie as RawCookie, ParseError as RawCookieParseError};
 
 mod cookie;

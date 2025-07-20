@@ -10,7 +10,6 @@ use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::Deref;
-use time;
 use url::Url;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -739,7 +738,6 @@ mod serde_json_tests {
     use crate::utils::test as test_utils;
     use crate::utils::test::*;
     use serde_json::json;
-    use time;
 
     fn encode_decode(c: &Cookie<'_>, expected: serde_json::Value) {
         let encoded = serde_json::to_value(c).unwrap();

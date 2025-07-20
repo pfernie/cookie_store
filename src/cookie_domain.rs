@@ -1,7 +1,4 @@
-use std;
-
 use cookie::Cookie as RawCookie;
-use idna;
 #[cfg(feature = "public_suffix")]
 use publicsuffix::{List, Psl, Suffix};
 #[cfg(feature = "serde")]
@@ -369,7 +366,6 @@ mod tests {
 
 #[cfg(all(test, feature = "serde_json"))]
 mod serde_json_tests {
-    use serde_json;
     use std::convert::TryFrom;
 
     use crate::cookie_domain::CookieDomain;

@@ -1,5 +1,3 @@
-use std;
-
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 use time::{self, OffsetDateTime};
@@ -97,7 +95,6 @@ impl From<time::Duration> for CookieExpiration {
 #[cfg(test)]
 mod tests {
     use super::CookieExpiration;
-    use time;
 
     use crate::utils::test::*;
 
