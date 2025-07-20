@@ -23,7 +23,6 @@ mod cookie_path;
 pub use crate::cookie_path::CookiePath;
 mod cookie_store;
 pub use crate::cookie_store::{CookieStore, StoreAction};
-#[cfg(feature = "serde")]
 pub mod serde;
 mod utils;
 
