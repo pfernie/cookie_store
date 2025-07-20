@@ -52,7 +52,7 @@ publicsuffix = { version = "2.2.3", optional = true }
 serde = { version = "1.0.147", optional = true }
 serde_derive = { version = "1.0.147", optional = true }
 serde_json = { version = "1.0.87", optional = true }
-ron = { version = "0.8.1", optional = true }
+ron = { version = "0.10.1", optional = true }
 
 [dependencies.cookie]
 features = ["percent-encode"]
