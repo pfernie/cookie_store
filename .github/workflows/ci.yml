@@ -17,8 +17,25 @@ jobs:
       - msrv
       - build
       - test
+      - style
     steps:
       - run: exit 0
+
+  style:
+    name: Check style
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check cargo fmt
+        run: cargo fmt -- --check
 
   msrv:
     name: MSRV
