@@ -467,6 +467,8 @@ impl CookieStore {
     pub fn new() -> Self {
         Self {
             cookies: DomainMap::new(),
+            #[cfg(feature = "public_suffix")]
+            public_suffix_list: None,
         }
     }
 
