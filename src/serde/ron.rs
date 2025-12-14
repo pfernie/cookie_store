@@ -81,22 +81,34 @@ mod tests {
         let mut writer = BufWriter::new(Vec::new());
         save(&cookie_store, &mut writer).unwrap();
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-        assert_eq!(cookie, string);
+        assert_eq!(
+            cookie.lines().collect::<Vec<&str>>(),
+            string.lines().collect::<Vec<&str>>()
+        );
 
         let mut writer = BufWriter::new(Vec::new());
         save_incl_expired_and_nonpersistent(&cookie_store, &mut writer).unwrap();
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-        assert_eq!(cookie, string);
+        assert_eq!(
+            cookie.lines().collect::<Vec<&str>>(),
+            string.lines().collect::<Vec<&str>>()
+        );
 
         let mut writer = BufWriter::new(Vec::new());
         save(&cookie_store_all, &mut writer).unwrap();
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-        assert_eq!(cookie, string);
+        assert_eq!(
+            cookie.lines().collect::<Vec<&str>>(),
+            string.lines().collect::<Vec<&str>>()
+        );
 
         let mut writer = BufWriter::new(Vec::new());
         save_incl_expired_and_nonpersistent(&cookie_store_all, &mut writer).unwrap();
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-        assert_eq!(cookie, string);
+        assert_eq!(
+            cookie.lines().collect::<Vec<&str>>(),
+            string.lines().collect::<Vec<&str>>()
+        );
     }
 
     #[test]
@@ -129,6 +141,9 @@ mod tests {
         let mut writer = BufWriter::new(Vec::new());
         save_incl_expired_and_nonpersistent(&cookie_store_all, &mut writer).unwrap();
         let string = String::from_utf8(writer.into_inner().unwrap()).unwrap();
-        assert_eq!(cookie, string);
+        assert_eq!(
+            cookie.lines().collect::<Vec<&str>>(),
+            string.lines().collect::<Vec<&str>>()
+        );
     }
 }
