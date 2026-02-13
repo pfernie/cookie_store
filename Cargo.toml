@@ -41,7 +41,7 @@ serde_ron = ["serde", "dep:ron"]
 document-features = "0.2.10"
 idna = "1.0"
 log = "0.4.17"
-time = "0.3.16"
+time = "0.3.47"
 url = "2.3.1"
 
 indexmap = { version = "2.6.0", optional = true }
