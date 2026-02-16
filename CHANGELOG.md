@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.22.1] - 2026-02-16
+
+### Documentation
+
+- Update features list in `README.md`
+
+### Miscellaneous Tasks
+
+- `map_or` simplification
+- Clippy(assertions_on_constants)
+- Clippy(to_string_in_format_args)
+- Clippy(matches_macro)
+- Clippy(unwrap_or_default)
+- Clippy(closure)
+- Clippy(manual_strip)
+- Clippy(needless_lifetimes)
+- Clippy(uninlined_format_args)
+- Clippy(dead_code): rm unused `IntoUrl`
+- Clippy(single_component_path_imports)
+- Rustfmt
+
+### Ci
+
+- Use msrv-aware cargo in msrv job
+- Bump MSRV to `1.64.0`
+- Fix pinned `time` version
+- Add `cargo clippy` check step
+- Add `cargo fmt` check step
+
+### Dep
+
+- Update MSRV to `1.88.0`
+
 ## [0.22.0] - 2025-07-20
 
 ### Bug Fixes

@@ -57,6 +57,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Resolve MSRV aware dependencies
+        run: cargo update
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+
       - name: Get MSRV package metadata
         id: metadata
         run: cargo metadata --no-deps --format-version 1 | jq -r '"msrv=" + .packages[0].rust_version' >> $GITHUB_OUTPUT
@@ -65,12 +71,6 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.metadata.outputs.msrv }}
-
-      - name: Pin time and idna_adapter versions
-        run: |
-          cargo update
-          cargo update -p time --precise 0.3.20
-          cargo update -p idna_adapter --precise 1.1.0
 
       - uses: Swatinem/rust-cache@v2
 
