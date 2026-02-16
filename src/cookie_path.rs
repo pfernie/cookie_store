@@ -7,7 +7,7 @@ use url::Url;
 /// Returns true if `request_url` path-matches `path` per
 /// [IETF RFC6265 Section 5.1.4](https://datatracker.ietf.org/doc/html/rfc6265#section-5.1.4)
 pub fn is_match(path: &str, request_url: &Url) -> bool {
-    CookiePath::parse(path).map_or(false, |cp| cp.matches(request_url))
+    CookiePath::parse(path).is_some_and(|cp| cp.matches(request_url))
 }
 
 /// The path of a `Cookie`
