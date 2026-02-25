@@ -1,5 +1,4 @@
 //! De/serialization functionality
-//! Requires feature `serde`
 
 use std::io::{BufRead, Write};
 
@@ -7,6 +6,7 @@ use crate::{cookie_store::StoreResult, Cookie, CookieStore};
 
 #[cfg(feature = "serde_json")]
 pub mod json;
+pub mod netscape;
 #[cfg(feature = "serde_ron")]
 pub mod ron;
 
