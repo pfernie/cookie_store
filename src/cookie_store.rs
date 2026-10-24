@@ -66,7 +66,19 @@ impl CookieStore {
     /// for use in the `Cookie` header of an HTTP request. For iteration over `Cookie` instances,
     /// please refer to [`CookieStore::matches`].
     pub fn get_request_values(&self, url: &Url) -> impl Iterator<Item = (&str, &str)> {
-        self.matches(url).into_iter().map(|c| c.name_value())
+        self.get_request_values_at(url, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::get_request_values`], but treats cookies as expired relative to `now`
+    /// rather than the system clock.
+    pub fn get_request_values_at(
+        &self,
+        url: &Url,
+        now: time::OffsetDateTime,
+    ) -> impl Iterator<Item = (&str, &str)> {
+        self.matches_at(url, now)
+            .into_iter()
+            .map(|c| c.name_value())
     }
 
     /// Store the `cookies` received from `url`
@@ -75,6 +87,17 @@ impl CookieStore {
         cookies: I,
         url: &Url,
     ) {
+        self.store_response_cookies_at(cookies, url, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::store_response_cookies`], but resolves Max-Age and expiry relative to
+    /// `now` rather than the system clock.
+    pub fn store_response_cookies_at<I: Iterator<Item = RawCookie<'static>>>(
+        &mut self,
+        cookies: I,
+        url: &Url,
+        now: time::OffsetDateTime,
+    ) {
         for cookie in cookies {
             if cookie.secure() != Some(true) || cfg!(feature = "log_secure_cookie_values") {
                 debug!("inserting Set-Cookie '{cookie:?}'");
@@ -82,7 +105,7 @@ impl CookieStore {
                 debug!("inserting secure cookie '{}'", cookie.name());
             }
 
-            if let Err(e) = self.insert_raw(&cookie, url) {
+            if let Err(e) = self.insert_raw_at(&cookie, url, now) {
                 debug!("unable to store Set-Cookie: {e:?}");
             }
         }
@@ -101,7 +124,19 @@ impl CookieStore {
     /// Returns true if the `CookieStore` contains an __unexpired__ `Cookie` corresponding to the
     /// specified `domain`, `path`, and `name`.
     pub fn contains(&self, domain: &str, path: &str, name: &str) -> bool {
-        self.get(domain, path, name).is_some()
+        self.contains_at(domain, path, name, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::contains`], but evaluates expiry relative to `now` rather than the system
+    /// clock.
+    pub fn contains_at(
+        &self,
+        domain: &str,
+        path: &str,
+        name: &str,
+        now: time::OffsetDateTime,
+    ) -> bool {
+        self.get_at(domain, path, name, now).is_some()
     }
 
     /// Returns true if the `CookieStore` contains any (even an __expired__) `Cookie` corresponding
@@ -113,8 +148,20 @@ impl CookieStore {
     /// Returns a reference to the __unexpired__ `Cookie` corresponding to the specified `domain`,
     /// `path`, and `name`.
     pub fn get(&self, domain: &str, path: &str, name: &str) -> Option<&Cookie<'_>> {
+        self.get_at(domain, path, name, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::get`], but evaluates expiry relative to `now` rather than the system
+    /// clock.
+    pub fn get_at(
+        &self,
+        domain: &str,
+        path: &str,
+        name: &str,
+        now: time::OffsetDateTime,
+    ) -> Option<&Cookie<'_>> {
         self.get_any(domain, path, name).and_then(|cookie| {
-            if cookie.is_expired() {
+            if cookie.expires_by(&now) {
                 None
             } else {
                 Some(cookie)
@@ -124,9 +171,15 @@ impl CookieStore {
 
     /// Returns a mutable reference to the __unexpired__ `Cookie` corresponding to the specified
     /// `domain`, `path`, and `name`.
-    fn get_mut(&mut self, domain: &str, path: &str, name: &str) -> Option<&mut Cookie<'static>> {
+    fn get_mut(
+        &mut self,
+        domain: &str,
+        path: &str,
+        name: &str,
+        now: time::OffsetDateTime,
+    ) -> Option<&mut Cookie<'static>> {
         self.get_mut_any(domain, path, name).and_then(|cookie| {
-            if cookie.is_expired() {
+            if cookie.expires_by(&now) {
                 None
             } else {
                 Some(cookie)
@@ -209,6 +262,16 @@ impl CookieStore {
     /// `request_url`, as well as having HttpOnly and Secure attributes compatible with the
     /// `request_url`.
     pub fn matches(&self, request_url: &Url) -> Vec<&Cookie<'static>> {
+        self.matches_at(request_url, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::matches`], but treats cookies as expired relative to `now` rather than
+    /// the system clock.
+    pub fn matches_at(
+        &self,
+        request_url: &Url,
+        now: time::OffsetDateTime,
+    ) -> Vec<&Cookie<'static>> {
         // although we domain_match and path_match as we descend through the tree, we
         // still need to
         // do a full Cookie::matches() check in the last filter. Otherwise, we cannot
@@ -223,7 +286,7 @@ impl CookieStore {
                     .filter(|&(p, _)| path_match(p, request_url))
                     .flat_map(|(_, pcs)| {
                         pcs.values()
-                            .filter(|c| !c.is_expired() && c.matches(request_url))
+                            .filter(|c| !c.expires_by(&now) && c.matches(request_url))
                     })
             });
         match (!is_http_scheme(request_url), !is_secure(request_url)) {
@@ -240,15 +303,37 @@ impl CookieStore {
 
     /// Parses a new `Cookie` from `cookie_str` and inserts it into the store.
     pub fn parse(&mut self, cookie_str: &str, request_url: &Url) -> InsertResult {
-        Cookie::parse(cookie_str, request_url)
-            .and_then(|cookie| self.insert(cookie.into_owned(), request_url))
+        self.parse_at(cookie_str, request_url, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::parse`], but resolves Max-Age and expiry relative to `now` rather than
+    /// the system clock.
+    pub fn parse_at(
+        &mut self,
+        cookie_str: &str,
+        request_url: &Url,
+        now: time::OffsetDateTime,
+    ) -> InsertResult {
+        Cookie::parse_at(cookie_str, request_url, now)
+            .and_then(|cookie| self.insert_at(cookie.into_owned(), request_url, now))
     }
 
     /// Converts a `cookie::Cookie` (from the `cookie` crate) into a `cookie_store::Cookie` and
     /// inserts it into the store.
     pub fn insert_raw(&mut self, cookie: &RawCookie<'_>, request_url: &Url) -> InsertResult {
-        Cookie::try_from_raw_cookie(cookie, request_url)
-            .and_then(|cookie| self.insert(cookie.into_owned(), request_url))
+        self.insert_raw_at(cookie, request_url, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::insert_raw`], but resolves Max-Age and expiry relative to `now` rather
+    /// than the system clock.
+    pub fn insert_raw_at(
+        &mut self,
+        cookie: &RawCookie<'_>,
+        request_url: &Url,
+        now: time::OffsetDateTime,
+    ) -> InsertResult {
+        Cookie::try_from_raw_cookie_at(cookie, request_url, now)
+            .and_then(|cookie| self.insert_at(cookie.into_owned(), request_url, now))
     }
 
     /// Inserts `cookie`, received from `request_url`, into the store, following the rules of the
@@ -258,6 +343,17 @@ impl CookieStore {
     /// `Cookie` in the store, the existing `Cookie` wil be `expired()` and
     /// `Ok(StoreAction::ExpiredExisting)` will be returned.
     pub fn insert(&mut self, cookie: Cookie<'static>, request_url: &Url) -> InsertResult {
+        self.insert_at(cookie, request_url, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::insert`], but evaluates the expiry of both the incoming and any existing
+    /// `Cookie` relative to `now` rather than the system clock.
+    pub fn insert_at(
+        &mut self,
+        cookie: Cookie<'static>,
+        request_url: &Url,
+        now: time::OffsetDateTime,
+    ) -> InsertResult {
         if cookie.http_only().unwrap_or(false) && !is_http_scheme(request_url) {
             // If the cookie was received from a "non-HTTP" API and the
             // cookie's http-only-flag is set, abort these steps and ignore the
@@ -303,20 +399,21 @@ impl CookieStore {
                 .domain
                 .as_cow()
                 .ok_or(CookieError::UnspecifiedDomain)?;
-            if let Some(old_cookie) = self.get_mut(&cookie_domain, &cookie.path, cookie.name()) {
+            if let Some(old_cookie) = self.get_mut(&cookie_domain, &cookie.path, cookie.name(), now)
+            {
                 if old_cookie.http_only().unwrap_or(false) && !is_http_scheme(request_url) {
                     // 2.  If the newly created cookie was received from a "non-HTTP"
                     //    API and the old-cookie's http-only-flag is set, abort these
                     //    steps and ignore the newly created cookie entirely.
                     return Err(CookieError::NonHttpScheme);
-                } else if cookie.is_expired() {
+                } else if cookie.expires_by(&now) {
                     old_cookie.expire();
                     return Ok(StoreAction::ExpiredExisting);
                 }
             }
         }
 
-        if !cookie.is_expired() {
+        if !cookie.expires_by(&now) {
             Ok(
                 if self
                     .cookies
@@ -344,11 +441,20 @@ impl CookieStore {
 
     /// An iterator visiting all the __unexpired__ cookies in the store
     pub fn iter_unexpired<'a>(&'a self) -> impl Iterator<Item = &'a Cookie<'static>> + 'a {
+        self.iter_unexpired_at(time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::iter_unexpired`], but treats cookies as expired relative to `now` rather
+    /// than the system clock.
+    pub fn iter_unexpired_at<'a>(
+        &'a self,
+        now: time::OffsetDateTime,
+    ) -> impl Iterator<Item = &'a Cookie<'static>> + 'a {
         self.cookies
             .values()
             .flat_map(|dcs| dcs.values())
             .flat_map(|pcs| pcs.values())
-            .filter(|c| !c.is_expired())
+            .filter(move |c| !c.expires_by(&now))
     }
 
     /// An iterator visiting all (including __expired__) cookies in the store
@@ -445,10 +551,23 @@ impl CookieStore {
     where
         I: IntoIterator<Item = Result<Cookie<'static>, E>>,
     {
+        Self::from_cookies_at(iter, include_expired, time::OffsetDateTime::now_utc())
+    }
+
+    /// As [`CookieStore::from_cookies`], but evaluates expiry relative to `now` rather than the
+    /// system clock.
+    pub fn from_cookies_at<I, E>(
+        iter: I,
+        include_expired: bool,
+        now: time::OffsetDateTime,
+    ) -> Result<Self, E>
+    where
+        I: IntoIterator<Item = Result<Cookie<'static>, E>>,
+    {
         let mut cookies = Map::new();
         for cookie in iter {
             let cookie = cookie?;
-            if include_expired || !cookie.is_expired() {
+            if include_expired || !cookie.expires_by(&now) {
                 cookies
                     .entry(String::from(&cookie.domain))
                     .or_insert_with(Map::new)
@@ -1680,7 +1799,12 @@ mod tests {
             let expired_cookie = Cookie::parse("cookie1=value1; Max-Age=-1", &request_url).unwrap();
             expired_err!(store.insert(expired_cookie, &request_url));
             check_matches!(&store);
-            match store.get_mut("example.com", "/", "cookie6") {
+            match store.get_mut(
+                "example.com",
+                "/",
+                "cookie6",
+                time::OffsetDateTime::now_utc(),
+            ) {
                 Some(cookie) => cookie.expire(),
                 None => unreachable!(),
             }
@@ -1753,6 +1877,214 @@ mod tests {
             check_matches!(&store);
             assert!(store.get("example.com", "/tmp", "cookie10").is_none());
             assert!(store.get_any("example.com", "/tmp", "cookie10").is_none());
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_at {
+    use super::{CookieStore, StoreAction};
+    use crate::cookie::Cookie;
+    use crate::CookieError;
+    use ::cookie::Cookie as RawCookie;
+    use time::macros::datetime;
+    use time::{Duration, OffsetDateTime};
+
+    use crate::utils::test as test_utils;
+
+    // Decades away from the wall clock in either direction
+    const PAST: OffsetDateTime = datetime!(2000-01-01 0:00 UTC);
+    const FUTURE: OffsetDateTime = datetime!(2200-01-01 0:00 UTC);
+
+    #[test]
+    fn max_age_relative_to_now() {
+        for now in [PAST, FUTURE] {
+            let url = test_utils::url("http://example.com/");
+            let mut store = CookieStore::default();
+            assert_eq!(
+                store.parse_at("a=b; Max-Age=60", &url, now),
+                Ok(StoreAction::Inserted)
+            );
+            assert!(store.contains_at("example.com", "/", "a", now));
+            assert!(store.contains_at("example.com", "/", "a", now + Duration::seconds(59)));
+            assert!(!store.contains_at("example.com", "/", "a", now + Duration::seconds(60)));
+            assert!(store
+                .get_at("example.com", "/", "a", now + Duration::seconds(61))
+                .is_none());
+        }
+    }
+
+    #[test]
+    fn expires_relative_to_now() {
+        let url = test_utils::url("http://example.com/");
+        let mut store = CookieStore::default();
+        assert_eq!(
+            store.parse_at("a=b; Expires=Sun, 02 Jan 2000 00:00:00 GMT", &url, PAST),
+            Ok(StoreAction::Inserted)
+        );
+        assert!(store.contains_at("example.com", "/", "a", PAST));
+        assert!(!store.contains_at("example.com", "/", "a", PAST + Duration::days(2)));
+        // expired by the wall clock, but still unexpired as of PAST
+        assert!(!store.contains("example.com", "/", "a"));
+    }
+
+    #[test]
+    fn insert_already_expired_at_now() {
+        let url = test_utils::url("http://example.com/");
+        let mut store = CookieStore::default();
+        // unexpired by the wall clock, but expired as of FUTURE
+        let expires = datetime!(2100-01-01 0:00 UTC);
+        let raw = RawCookie::build(("a", "b")).expires(expires).build();
+        assert_eq!(
+            store.insert_raw_at(&raw, &url, FUTURE),
+            Err(CookieError::Expired)
+        );
+        assert_eq!(
+            store.insert_raw_at(&raw, &url, PAST),
+            Ok(StoreAction::Inserted)
+        );
+    }
+
+    #[test]
+    fn expired_set_cookie_removes_existing() {
+        let url = test_utils::url("http://example.com/");
+        for expire in ["a=; Max-Age=0", "a=; Expires=Fri, 31 Dec 1999 00:00:00 GMT"] {
+            let mut store = CookieStore::default();
+            assert_eq!(
+                store.parse_at("a=b; Max-Age=3600", &url, PAST),
+                Ok(StoreAction::Inserted)
+            );
+            assert!(store.contains_at("example.com", "/", "a", PAST));
+            assert_eq!(
+                store.parse_at(expire, &url, PAST),
+                Ok(StoreAction::ExpiredExisting)
+            );
+            assert!(!store.contains_at("example.com", "/", "a", PAST));
+            assert!(store.contains_any("example.com", "/", "a"));
+        }
+    }
+
+    #[test]
+    fn expiry_of_existing_uses_now() {
+        let url = test_utils::url("http://example.com/");
+        let mut store = CookieStore::default();
+        store.parse_at("a=b; Max-Age=60", &url, PAST).unwrap();
+        // existing cookie already expired as of `later`, so the replacement is a fresh insert
+        let later = PAST + Duration::seconds(120);
+        assert_eq!(
+            store.parse_at("a=c; Max-Age=60", &url, later),
+            Ok(StoreAction::UpdatedExisting)
+        );
+        assert_eq!(
+            store
+                .get_at("example.com", "/", "a", later)
+                .unwrap()
+                .value(),
+            "c"
+        );
+    }
+
+    #[test]
+    fn matching_relative_to_now() {
+        let url = test_utils::url("http://example.com/foo");
+        let mut store = CookieStore::default();
+        let raws = vec![
+            RawCookie::parse("a=1; Max-Age=60").unwrap(),
+            RawCookie::parse("b=2; Max-Age=3600").unwrap(),
+            RawCookie::parse("c=3").unwrap(),
+        ];
+        store.store_response_cookies_at(raws.into_iter(), &url, PAST);
+
+        let names = |now: OffsetDateTime| {
+            let mut v = store
+                .matches_at(&url, now)
+                .iter()
+                .map(|c| c.name().to_owned())
+                .collect::<Vec<_>>();
+            v.sort();
+            v
+        };
+        assert_eq!(names(PAST), ["a", "b", "c"]);
+        assert_eq!(names(PAST + Duration::seconds(61)), ["b", "c"]);
+        assert_eq!(names(PAST + Duration::hours(2)), ["c"]);
+        assert_eq!(names(FUTURE), ["c"]);
+
+        let mut values = store
+            .get_request_values_at(&url, PAST + Duration::seconds(61))
+            .collect::<Vec<_>>();
+        values.sort();
+        assert_eq!(values, [("b", "2"), ("c", "3")]);
+
+        assert_eq!(store.iter_unexpired_at(PAST).count(), 3);
+        assert_eq!(
+            store.iter_unexpired_at(PAST + Duration::hours(2)).count(),
+            1
+        );
+        // Max-Age was resolved against PAST, so the wall clock sees only the session cookie
+        assert_eq!(store.iter_unexpired().count(), 1);
+    }
+
+    #[test]
+    fn from_cookies_relative_to_now() {
+        let url = test_utils::url("http://example.com/");
+        let cookies = || {
+            vec![
+                Cookie::parse_at("a=1; Max-Age=60", &url, PAST).map(Cookie::into_owned),
+                Cookie::parse_at("b=2; Max-Age=3600", &url, PAST).map(Cookie::into_owned),
+            ]
+        };
+        let at = |now, include_expired| {
+            CookieStore::from_cookies_at(cookies(), include_expired, now)
+                .unwrap()
+                .iter_any()
+                .count()
+        };
+        assert_eq!(at(PAST, false), 2);
+        assert_eq!(at(PAST + Duration::seconds(61), false), 1);
+        assert_eq!(at(PAST + Duration::seconds(61), true), 2);
+        assert_eq!(at(FUTURE, false), 0);
+    }
+
+    #[test]
+    fn wrappers_match_at_now_utc() {
+        let url = test_utils::url("http://example.com/foo");
+        let mut wall = CookieStore::default();
+        let mut at = CookieStore::default();
+        let inputs = [
+            "a=1; Max-Age=3600",
+            "b=2",
+            "c=3; Expires=Fri, 31 Dec 1999 00:00:00 GMT",
+            "d=4; Max-Age=0",
+            "a=5; Max-Age=7200",
+        ];
+        for input in inputs {
+            assert_eq!(
+                wall.parse(input, &url),
+                at.parse_at(input, &url, OffsetDateTime::now_utc())
+            );
+        }
+
+        let now = OffsetDateTime::now_utc();
+        assert_eq!(wall.matches(&url).len(), at.matches_at(&url, now).len());
+        assert_eq!(
+            wall.get_request_values(&url).collect::<Vec<_>>(),
+            at.get_request_values_at(&url, now).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            wall.iter_unexpired().count(),
+            at.iter_unexpired_at(now).count()
+        );
+        for name in ["a", "b", "c", "d"] {
+            assert_eq!(
+                wall.contains("example.com", "/", name),
+                at.contains_at("example.com", "/", name, now)
+            );
+            assert_eq!(
+                wall.get("example.com", "/", name)
+                    .map(|c| c.value().to_owned()),
+                at.get_at("example.com", "/", name, now)
+                    .map(|c| c.value().to_owned())
+            );
         }
     }
 }
