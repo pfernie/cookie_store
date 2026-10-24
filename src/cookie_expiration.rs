@@ -78,15 +78,23 @@ impl From<cookie::Expiration> for CookieExpiration {
 
 impl From<time::Duration> for CookieExpiration {
     fn from(duration: time::Duration) -> Self {
+        CookieExpiration::from_max_age_at(duration, time::OffsetDateTime::now_utc())
+    }
+}
+
+impl CookieExpiration {
+    /// Creates a `CookieExpiration` from a Max-Age `duration` relative to the supplied `now`,
+    /// rather than the system clock. See also the `From<time::Duration>` impl, which uses the
+    /// current system time.
+    pub fn from_max_age_at(duration: time::Duration, now: OffsetDateTime) -> Self {
         // If delta-seconds is less than or equal to zero (0), let expiry-time
         //    be the earliest representable date and time.  Otherwise, let the
         //    expiry-time be the current date and time plus delta-seconds seconds.
         let utc_tm = if duration.is_zero() {
             time::OffsetDateTime::UNIX_EPOCH
         } else {
-            let now_utc = time::OffsetDateTime::now_utc();
-            let d = (MAX_RFC3339 - now_utc).min(duration);
-            now_utc + d
+            let d = (MAX_RFC3339 - now).min(duration);
+            now + d
         };
         CookieExpiration::from(utc_tm)
     }
@@ -118,6 +126,31 @@ mod tests {
         let ma = CookieExpiration::from(60u64);
         assert!(!ma.is_expired());
         assert!(ma.expires_by(&in_minutes(2)));
+    }
+
+    #[test]
+    fn max_age_at() {
+        let now = time::macros::datetime!(2000-01-01 0:00 UTC);
+        let ma = CookieExpiration::from_max_age_at(time::Duration::seconds(60), now);
+        assert_eq!(
+            ma,
+            CookieExpiration::from(now + time::Duration::seconds(60))
+        );
+        assert!(!ma.expires_by(&now));
+        assert!(ma.expires_by(&(now + time::Duration::seconds(60))));
+        assert_eq!(
+            CookieExpiration::from_max_age_at(time::Duration::ZERO, now),
+            CookieExpiration::from(time::OffsetDateTime::UNIX_EPOCH)
+        );
+    }
+
+    #[test]
+    fn max_age_at_bounds() {
+        let now = time::macros::datetime!(9999-12-31 0:00 UTC);
+        assert_eq!(
+            CookieExpiration::from_max_age_at(time::Duration::MAX, now),
+            CookieExpiration::from(time::macros::datetime!(9999-12-31 23:59:59 UTC))
+        );
     }
 
     #[test]

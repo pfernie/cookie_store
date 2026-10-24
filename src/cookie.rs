@@ -165,12 +165,36 @@ impl<'a> Cookie<'a> {
     where
         S: Into<Cow<'a, str>>,
     {
-        Cookie::try_from_raw_cookie(&RawCookie::parse(cookie_str)?, request_url)
+        Cookie::parse_at(cookie_str, request_url, time::OffsetDateTime::now_utc())
+    }
+
+    /// Parses a new `cookie_store::Cookie` from `cookie_str`, resolving a Max-Age attribute
+    /// relative to `now` instead of the system clock.
+    pub fn parse_at<S>(
+        cookie_str: S,
+        request_url: &Url,
+        now: time::OffsetDateTime,
+    ) -> CookieResult<'a>
+    where
+        S: Into<Cow<'a, str>>,
+    {
+        Cookie::try_from_raw_cookie_at(&RawCookie::parse(cookie_str)?, request_url, now)
     }
 
     /// Create a new `cookie_store::Cookie` from a `cookie::Cookie` (from the `cookie` crate)
     /// received from `request_url`.
     pub fn try_from_raw_cookie(raw_cookie: &RawCookie<'a>, request_url: &Url) -> CookieResult<'a> {
+        Cookie::try_from_raw_cookie_at(raw_cookie, request_url, time::OffsetDateTime::now_utc())
+    }
+
+    /// Create a new `cookie_store::Cookie` from a `cookie::Cookie` (from the `cookie` crate)
+    /// received from `request_url`, resolving a Max-Age attribute relative to `now` instead of
+    /// the system clock.
+    pub fn try_from_raw_cookie_at(
+        raw_cookie: &RawCookie<'a>,
+        request_url: &Url,
+        now: time::OffsetDateTime,
+    ) -> CookieResult<'a> {
         if raw_cookie.http_only().unwrap_or(false) && !is_http_scheme(request_url) {
             // If the cookie was received from a "non-HTTP" API and the
             // cookie's http-only-flag is set, abort these steps and ignore the
@@ -209,7 +233,7 @@ impl<'a> Cookie<'a> {
         // per RFC6265, Max-Age takes precedence, then Expires, otherwise is Session
         // only
         let expires = if let Some(max_age) = raw_cookie.max_age() {
-            CookieExpiration::from(max_age)
+            CookieExpiration::from_max_age_at(max_age, now)
         } else if let Some(expiration) = raw_cookie.expires() {
             CookieExpiration::from(expiration)
         } else {
